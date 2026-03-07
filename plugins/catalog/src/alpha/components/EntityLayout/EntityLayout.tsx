@@ -27,7 +27,6 @@ import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 import {
   Content,
   Link,
-  Page,
   Progress,
   WarningPanel,
 } from '@backstage/core-components';
@@ -150,7 +149,7 @@ export const EntityLayout = (props: EntityLayoutProps) => {
   const { t } = useTranslationRef(catalogTranslationRef);
 
   return (
-    <Page themeId={entity?.spec?.type?.toString() ?? 'home'}>
+    <>
       {header ?? (
         <EntityHeader
           parentEntityRelations={parentEntityRelations}
@@ -195,7 +194,7 @@ export const EntityLayout = (props: EntityLayoutProps) => {
           )}
         </Content>
       )}
-    </Page>
+    </>
   );
 };
 

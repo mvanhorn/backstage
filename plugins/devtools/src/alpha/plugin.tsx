@@ -68,8 +68,8 @@ export const devToolsPage = PageBlueprint.makeWithOverrides({
           title: content.get(coreExtensionData.title),
           children: content.get(coreExtensionData.reactElement),
         }));
-        return import('../components/DevToolsPage').then(m => (
-          <m.DevToolsPage contents={contents} />
+        return import('../components/DevToolsPage/DevToolsPage').then(m => (
+          <m.NfsDevToolsPage contents={contents} />
         ));
       },
     });

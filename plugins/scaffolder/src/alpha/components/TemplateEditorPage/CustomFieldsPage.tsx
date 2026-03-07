@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { Page, Header, Content } from '@backstage/core-components';
 import { useRouteRef } from '@backstage/core-plugin-api';
 import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 import { FieldExtensionOptions } from '@backstage/plugin-scaffolder-react';
@@ -23,9 +22,11 @@ import { editRouteRef } from '../../../routes';
 import { scaffolderTranslationRef } from '../../../translation';
 
 import { CustomFieldExplorer } from './CustomFieldExplorer';
+import { ScaffolderPageLayout } from '../../../components/ScaffolderPageLayout';
 
 interface CustomFieldsPageProps {
   fieldExtensions?: FieldExtensionOptions<any, any>[];
+  headerVariant?: 'legacy' | 'bui';
 }
 
 export function CustomFieldsPage(props: CustomFieldsPageProps) {
@@ -33,16 +34,15 @@ export function CustomFieldsPage(props: CustomFieldsPageProps) {
   const { t } = useTranslationRef(scaffolderTranslationRef);
 
   return (
-    <Page themeId="home">
-      <Header
-        title={t('templateCustomFieldPage.title')}
-        subtitle={t('templateCustomFieldPage.subtitle')}
-        type={t('templateIntroPage.title')}
-        typeLink={editLink()}
-      />
-      <Content>
-        <CustomFieldExplorer customFieldExtensions={props.fieldExtensions} />
-      </Content>
-    </Page>
+    <ScaffolderPageLayout
+      themeId="home"
+      headerVariant={props.headerVariant}
+      title={t('templateCustomFieldPage.title')}
+      subtitle={t('templateCustomFieldPage.subtitle')}
+      type={t('templateIntroPage.title')}
+      typeLink={editLink()}
+    >
+      <CustomFieldExplorer customFieldExtensions={props.fieldExtensions} />
+    </ScaffolderPageLayout>
   );
 }

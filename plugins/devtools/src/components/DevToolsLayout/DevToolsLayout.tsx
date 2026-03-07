@@ -15,6 +15,7 @@
  */
 
 import { Header, Page, RoutedTabs } from '@backstage/core-components';
+import { HeaderPage } from '@backstage/ui';
 import {
   attachComponentData,
   useElementFilter,
@@ -79,6 +80,30 @@ export const DevToolsLayout = ({
       <Header title={title ?? 'Backstage DevTools'} subtitle={subtitle} />
       <RoutedTabs routes={routes} />
     </Page>
+  );
+};
+
+export const NfsDevToolsLayout = ({
+  children,
+  title,
+  subtitle,
+}: DevToolsLayoutProps) => {
+  const routes = useElementFilter(children, elements =>
+    elements
+      .selectByComponentData({
+        key: dataKey,
+        withStrictError:
+          'Child of DevToolsLayout must be an DevToolsLayout.Route',
+      })
+      .getElements<SubRoute>()
+      .map(child => child.props),
+  );
+
+  return (
+    <>
+      <HeaderPage title={title ?? 'Backstage DevTools'} subtitle={subtitle} />
+      <RoutedTabs routes={routes} />
+    </>
   );
 };
 

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 import { makeStyles } from '@material-ui/core/styles';
-import { Content, Header, Page } from '@backstage/core-components';
 import { useRouteRef } from '@backstage/core-plugin-api';
 import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 import {
@@ -25,6 +24,7 @@ import {
 import { scaffolderTranslationRef } from '../../../translation';
 import { editRouteRef } from '../../../routes';
 import { TemplateEditor } from './TemplateEditor';
+import { ScaffolderPageLayout } from '../../../components/ScaffolderPageLayout';
 
 const useStyles = makeStyles(
   {
@@ -40,6 +40,7 @@ interface TemplatePageProps {
   fieldExtensions?: FieldExtensionOptions<any, any>[];
   layouts?: LayoutOptions[];
   formProps?: FormProps;
+  headerVariant?: 'legacy' | 'bui';
 }
 
 export function TemplateEditorPage(props: TemplatePageProps) {
@@ -48,20 +49,20 @@ export function TemplateEditorPage(props: TemplatePageProps) {
   const { t } = useTranslationRef(scaffolderTranslationRef);
 
   return (
-    <Page themeId="home">
-      <Header
-        title={t('templateEditorPage.title')}
-        subtitle={t('templateEditorPage.subtitle')}
-        type={t('templateIntroPage.title')}
-        typeLink={editLink()}
+    <ScaffolderPageLayout
+      themeId="home"
+      headerVariant={props.headerVariant}
+      title={t('templateEditorPage.title')}
+      subtitle={t('templateEditorPage.subtitle')}
+      type={t('templateIntroPage.title')}
+      typeLink={editLink()}
+      contentClassName={classes.content}
+    >
+      <TemplateEditor
+        layouts={props.layouts}
+        formProps={props.formProps}
+        fieldExtensions={props.fieldExtensions}
       />
-      <Content className={classes.content}>
-        <TemplateEditor
-          layouts={props.layouts}
-          formProps={props.formProps}
-          fieldExtensions={props.fieldExtensions}
-        />
-      </Content>
-    </Page>
+    </ScaffolderPageLayout>
   );
 }

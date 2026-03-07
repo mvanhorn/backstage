@@ -21,6 +21,7 @@ import {
   PageWithHeader,
   ResponseErrorPanel,
 } from '@backstage/core-components';
+import { HeaderPage } from '@backstage/ui';
 import Grid from '@material-ui/core/Grid';
 import { ConfirmProvider } from 'material-ui-confirm';
 import { useSignal } from '@backstage/plugin-signals-react';
@@ -66,7 +67,9 @@ export type NotificationsPageProps = {
   typeLink?: string;
 };
 
-export const NotificationsPage = (props?: NotificationsPageProps) => {
+function NotificationsPageContent(
+  props: NotificationsPageProps & { headerVariant: 'legacy' | 'bui' },
+) {
   const { t } = useTranslationRef(notificationsTranslationRef);
   const {
     title = t('notificationsPage.title'),
@@ -76,7 +79,8 @@ export const NotificationsPage = (props?: NotificationsPageProps) => {
     type,
     typeLink,
     markAsReadOnLinkOpen,
-  } = props ?? {};
+    headerVariant,
+  } = props;
 
   const [refresh, setRefresh] = useState(false);
   const { lastSignal } = useSignal('notifications');
@@ -186,6 +190,57 @@ export const NotificationsPage = (props?: NotificationsPageProps) => {
     });
   }
 
+  const pageContent = (
+    <Content>
+      <ConfirmProvider>
+        <Grid container>
+          <Grid item xs={2}>
+            <NotificationsFilters
+              unreadOnly={unreadOnly}
+              onUnreadOnlyChanged={setUnreadOnly}
+              createdAfter={createdAfter}
+              onCreatedAfterChanged={setCreatedAfter}
+              onSortingChanged={setSorting}
+              sorting={sorting}
+              saved={saved}
+              onSavedChanged={setSaved}
+              severity={severity}
+              onSeverityChanged={setSeverity}
+              topic={topic}
+              onTopicChanged={setTopic}
+              allTopics={allTopics}
+            />
+          </Grid>
+          <Grid item xs={10}>
+            <NotificationsTable
+              title={tableTitle}
+              isLoading={loading}
+              isUnread={isUnread}
+              markAsReadOnLinkOpen={markAsReadOnLinkOpen}
+              notifications={notifications}
+              onUpdate={onUpdate}
+              setContainsText={setContainsText}
+              onPageChange={setPageNumber}
+              onRowsPerPageChange={setPageSize}
+              page={pageNumber}
+              pageSize={pageSize}
+              totalCount={totalCount}
+            />
+          </Grid>
+        </Grid>
+      </ConfirmProvider>
+    </Content>
+  );
+
+  if (headerVariant === 'bui') {
+    return (
+      <>
+        <HeaderPage title={title} subtitle={subtitle} />
+        {pageContent}
+      </>
+    );
+  }
+
   return (
     <PageWithHeader
       title={title}
@@ -195,45 +250,15 @@ export const NotificationsPage = (props?: NotificationsPageProps) => {
       type={type}
       typeLink={typeLink}
     >
-      <Content>
-        <ConfirmProvider>
-          <Grid container>
-            <Grid item xs={2}>
-              <NotificationsFilters
-                unreadOnly={unreadOnly}
-                onUnreadOnlyChanged={setUnreadOnly}
-                createdAfter={createdAfter}
-                onCreatedAfterChanged={setCreatedAfter}
-                onSortingChanged={setSorting}
-                sorting={sorting}
-                saved={saved}
-                onSavedChanged={setSaved}
-                severity={severity}
-                onSeverityChanged={setSeverity}
-                topic={topic}
-                onTopicChanged={setTopic}
-                allTopics={allTopics}
-              />
-            </Grid>
-            <Grid item xs={10}>
-              <NotificationsTable
-                title={tableTitle}
-                isLoading={loading}
-                isUnread={isUnread}
-                markAsReadOnLinkOpen={markAsReadOnLinkOpen}
-                notifications={notifications}
-                onUpdate={onUpdate}
-                setContainsText={setContainsText}
-                onPageChange={setPageNumber}
-                onRowsPerPageChange={setPageSize}
-                page={pageNumber}
-                pageSize={pageSize}
-                totalCount={totalCount}
-              />
-            </Grid>
-          </Grid>
-        </ConfirmProvider>
-      </Content>
+      {pageContent}
     </PageWithHeader>
   );
-};
+}
+
+export const NotificationsPage = (props?: NotificationsPageProps) => (
+  <NotificationsPageContent {...(props ?? {})} headerVariant="legacy" />
+);
+
+export const NfsNotificationsPage = (props?: NotificationsPageProps) => (
+  <NotificationsPageContent {...(props ?? {})} headerVariant="bui" />
+);

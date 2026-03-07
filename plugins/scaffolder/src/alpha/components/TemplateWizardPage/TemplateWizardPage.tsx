@@ -41,7 +41,7 @@ import {
   useTemplateParameterSchema,
 } from '@backstage/plugin-scaffolder-react/alpha';
 import { JsonValue } from '@backstage/types';
-import { Header, Page, Progress } from '@backstage/core-components';
+import { Progress } from '@backstage/core-components';
 
 import {
   rootRouteRef,
@@ -53,6 +53,7 @@ import { scaffolderTranslationRef } from '../../../translation';
 
 import { TemplateWizardPageContextMenu } from './TemplateWizardPageContextMenu';
 import { useFormDecorators } from '../../hooks';
+import { ScaffolderPageLayout } from '../../../components/ScaffolderPageLayout';
 
 /**
  * @alpha
@@ -69,6 +70,7 @@ export type TemplateWizardPageProps = {
     title?: string;
     subtitle?: string;
   };
+  headerVariant?: 'legacy' | 'bui';
 };
 
 export const TemplateWizardPage = (props: TemplateWizardPageProps) => {
@@ -136,21 +138,24 @@ export const TemplateWizardPage = (props: TemplateWizardPageProps) => {
 
   return (
     <AnalyticsContext attributes={{ entityRef: templateRef }}>
-      <Page themeId="website">
-        <Header
-          pageTitleOverride={
-            manifest?.title
-              ? t('templateWizardPage.templateWithTitle', {
-                  templateTitle: manifest.title,
-                })
-              : t('templateWizardPage.pageTitle')
-          }
-          title={t('templateWizardPage.title')}
-          subtitle={t('templateWizardPage.subtitle')}
-          {...props.headerOptions}
-        >
-          <TemplateWizardPageContextMenu editUrl={editUrl} />
-        </Header>
+      <ScaffolderPageLayout
+        themeId="website"
+        withContent={false}
+        headerVariant={props.headerVariant}
+        pageTitleOverride={
+          props.headerOptions?.pageTitleOverride ??
+          (manifest?.title
+            ? t('templateWizardPage.templateWithTitle', {
+                templateTitle: manifest.title,
+              })
+            : t('templateWizardPage.pageTitle'))
+        }
+        title={props.headerOptions?.title ?? t('templateWizardPage.title')}
+        subtitle={
+          props.headerOptions?.subtitle ?? t('templateWizardPage.subtitle')
+        }
+        headerActions={<TemplateWizardPageContextMenu editUrl={editUrl} />}
+      >
         {isCreating && <Progress />}
         <Workflow
           namespace={namespace}
@@ -162,7 +167,7 @@ export const TemplateWizardPage = (props: TemplateWizardPageProps) => {
           formProps={props.formProps}
           layouts={props.layouts}
         />
-      </Page>
+      </ScaffolderPageLayout>
     </AnalyticsContext>
   );
 };

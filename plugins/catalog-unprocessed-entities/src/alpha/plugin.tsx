@@ -51,7 +51,7 @@ export const catalogUnprocessedEntitiesPage = PageBlueprint.make({
     routeRef: rootRouteRef,
     loader: () =>
       import('../components/UnprocessedEntities').then(m => (
-        <m.UnprocessedEntities />
+        <m.NfsUnprocessedEntities />
       )),
   },
 });

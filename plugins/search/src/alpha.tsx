@@ -23,10 +23,9 @@ import {
   CatalogIcon,
   Content,
   DocsIcon,
-  Header,
-  Page,
   useSidebarPinState,
 } from '@backstage/core-components';
+import { HeaderPage } from '@backstage/ui';
 import {
   useApi,
   discoveryApiRef,
@@ -143,8 +142,8 @@ export const searchPage = PageBlueprint.makeWithOverrides({
           const configApi = useApi(configApiRef);
 
           return (
-            <Page themeId="home">
-              {!isMobile && <Header title="Search" />}
+            <>
+              {!isMobile && <HeaderPage title="Search" />}
               <Content>
                 <Grid container direction="row">
                   <Grid item xs={12}>
@@ -249,7 +248,7 @@ export const searchPage = PageBlueprint.makeWithOverrides({
                   </Grid>
                 </Grid>
               </Content>
-            </Page>
+            </>
           );
         };
 

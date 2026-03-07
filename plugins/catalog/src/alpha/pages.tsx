@@ -62,12 +62,14 @@ export const catalogPage = PageBlueprint.makeWithOverrides({
       icon: <CategoryIcon fontSize="inherit" />,
       title: 'Catalog',
       loader: async () => {
-        const { BaseCatalogPage } = await import('../components/CatalogPage');
+        const { NfsDefaultCatalogPage } = await import(
+          '../components/CatalogPage/DefaultCatalogPage'
+        );
         const filters = inputs.filters.map(filter =>
           filter.get(coreExtensionData.reactElement),
         );
         return (
-          <BaseCatalogPage
+          <NfsDefaultCatalogPage
             filters={<>{filters}</>}
             pagination={config.pagination}
           />

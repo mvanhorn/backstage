@@ -30,7 +30,7 @@ const page = PageBlueprint.make({
     routeRef: rootRouteRef,
     loader: () =>
       import('./components/NotificationsPage').then(m => (
-        <m.NotificationsPage />
+        <m.NfsNotificationsPage />
       )),
   },
 });

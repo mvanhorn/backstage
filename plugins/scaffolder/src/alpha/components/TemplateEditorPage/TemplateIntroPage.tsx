@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 import { useCallback } from 'react';
-import { Content, Header, Page } from '@backstage/core-components';
 
 import { TemplateEditorIntro } from './TemplateEditorIntro';
 import { useNavigate } from 'react-router-dom';
@@ -28,8 +27,9 @@ import {
 import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 import { scaffolderTranslationRef } from '../../../translation';
 import { useTemplateDirectory } from './useTemplateDirectory';
+import { ScaffolderPageLayout } from '../../../components/ScaffolderPageLayout';
 
-export function TemplateIntroPage() {
+export function TemplateIntroPage(props: { headerVariant?: 'legacy' | 'bui' }) {
   const navigate = useNavigate();
   const createLink = useRouteRef(rootRouteRef);
   const editorLink = useRouteRef(editorRouteRef);
@@ -65,16 +65,15 @@ export function TemplateIntroPage() {
   );
 
   return (
-    <Page themeId="home">
-      <Header
-        title={t('templateIntroPage.title')}
-        type="Scaffolder"
-        typeLink={createLink()}
-        subtitle={t('templateIntroPage.subtitle')}
-      />
-      <Content>
-        <TemplateEditorIntro onSelect={handleSelect} />
-      </Content>
-    </Page>
+    <ScaffolderPageLayout
+      themeId="home"
+      headerVariant={props.headerVariant}
+      title={t('templateIntroPage.title')}
+      type="Scaffolder"
+      typeLink={createLink()}
+      subtitle={t('templateIntroPage.subtitle')}
+    >
+      <TemplateEditorIntro onSelect={handleSelect} />
+    </ScaffolderPageLayout>
   );
 }

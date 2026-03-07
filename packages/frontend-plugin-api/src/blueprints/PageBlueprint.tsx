@@ -75,6 +75,9 @@ export const PageBlueprint = createExtensionBlueprint({
     const icon = params.icon;
     const pluginId = node.spec.plugin.pluginId;
     const noHeader = params.noHeader ?? false;
+    const resolvedTitle =
+      title ?? node.spec.plugin.title ?? node.spec.plugin.pluginId;
+    const resolvedIcon = icon ?? node.spec.plugin.icon;
 
     yield coreExtensionData.routePath(config.path ?? params.path);
     if (params.loader) {
@@ -85,8 +88,8 @@ export const PageBlueprint = createExtensionBlueprint({
 
         return (
           <PageLayout
-            title={title ?? node.spec.plugin.title ?? node.spec.plugin.pluginId}
-            icon={icon ?? node.spec.plugin.icon}
+            title={resolvedTitle}
+            icon={resolvedIcon}
             noHeader={noHeader}
             headerActions={headerActions}
           >
@@ -117,8 +120,8 @@ export const PageBlueprint = createExtensionBlueprint({
 
         return (
           <PageLayout
-            title={title}
-            icon={icon}
+            title={resolvedTitle}
+            icon={resolvedIcon}
             tabs={tabs}
             headerActions={headerActions}
           >
@@ -147,7 +150,11 @@ export const PageBlueprint = createExtensionBlueprint({
         const headerActionsApi = useApi(pluginHeaderActionsApiRef);
         const headerActions = headerActionsApi.getPluginHeaderActions(pluginId);
         return (
-          <PageLayout title={title} icon={icon} headerActions={headerActions} />
+          <PageLayout
+            title={resolvedTitle}
+            icon={resolvedIcon}
+            headerActions={headerActions}
+          />
         );
       };
       yield coreExtensionData.reactElement(<PageContent />);

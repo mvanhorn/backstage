@@ -37,8 +37,8 @@ const userSettingsPage = PageBlueprint.makeWithOverrides({
       path: '/settings',
       routeRef: settingsRouteRef,
       loader: () =>
-        import('./components/SettingsPage').then(m => (
-          <m.SettingsPage
+        import('./components/SettingsPage/SettingsPage').then(m => (
+          <m.NfsSettingsPage
             providerSettings={inputs.providerSettings?.get(
               coreExtensionData.reactElement,
             )}

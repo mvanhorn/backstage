@@ -23,6 +23,7 @@ import {
   SupportButton,
 } from '@backstage/core-components';
 import { useAnalytics, useRouteRef } from '@backstage/core-plugin-api';
+import { HeaderPage } from '@backstage/ui';
 import {
   entityRouteRef,
   humanizeEntityRef,
@@ -116,21 +117,23 @@ const useStyles = makeStyles(
   { name: 'PluginCatalogGraphCatalogGraphPage' },
 );
 
-export const CatalogGraphPage = (
-  props: {
-    initialState?: {
-      selectedRelations?: string[];
-      selectedKinds?: string[];
-      rootEntityRefs?: string[];
-      maxDepth?: number;
-      unidirectional?: boolean;
-      mergeRelations?: boolean;
-      direction?: Direction;
-      showFilters?: boolean;
-      curve?: 'curveStepBefore' | 'curveMonotoneX';
-    };
-  } & Partial<EntityRelationsGraphProps>,
-) => {
+type CatalogGraphPageProps = {
+  initialState?: {
+    selectedRelations?: string[];
+    selectedKinds?: string[];
+    rootEntityRefs?: string[];
+    maxDepth?: number;
+    unidirectional?: boolean;
+    mergeRelations?: boolean;
+    direction?: Direction;
+    showFilters?: boolean;
+    curve?: 'curveStepBefore' | 'curveMonotoneX';
+  };
+} & Partial<EntityRelationsGraphProps>;
+
+function CatalogGraphPageContent(
+  props: CatalogGraphPageProps & { headerVariant: 'legacy' | 'bui' },
+) {
   const { relationPairs, initialState, entityFilter } = props;
   const { t } = useTranslationRef(catalogGraphTranslationRef);
   const navigate = useNavigate();
@@ -185,93 +188,125 @@ export const CatalogGraphPage = (
     [catalogEntityRoute, navigate, setRootEntityNames, analytics],
   );
 
+  const pageBody = (
+    <Grid container alignItems="stretch" className={classes.container}>
+      {showFilters && (
+        <Grid item xs={12} lg={2} className={classes.filters}>
+          <MaxDepthFilter value={maxDepth} onChange={setMaxDepth} />
+          <SelectedKindsFilter
+            value={selectedKinds}
+            onChange={setSelectedKinds}
+          />
+          <SelectedRelationsFilter
+            value={selectedRelations}
+            onChange={setSelectedRelations}
+          />
+          <DirectionFilter value={direction} onChange={setDirection} />
+          <CurveFilter value={curve} onChange={setCurve} />
+          <SwitchFilter
+            value={unidirectional}
+            onChange={setUnidirectional}
+            label={t('catalogGraphPage.simplifiedSwitchLabel')}
+          />
+          <SwitchFilter
+            value={mergeRelations}
+            onChange={setMergeRelations}
+            label={t('catalogGraphPage.mergeRelationsSwitchLabel')}
+          />
+        </Grid>
+      )}
+      <Grid item xs className={classes.fullHeight}>
+        <Paper className={classes.graphWrapper}>
+          <Typography
+            variant="caption"
+            color="textSecondary"
+            display="block"
+            className={classes.legend}
+          >
+            <ZoomOutMap className="icon" />{' '}
+            {t('catalogGraphPage.zoomOutDescription')}
+          </Typography>
+          <EntityRelationsGraph
+            {...props}
+            rootEntityNames={rootEntityNames}
+            maxDepth={maxDepth}
+            kinds={
+              selectedKinds && selectedKinds.length > 0
+                ? selectedKinds
+                : undefined
+            }
+            relations={
+              selectedRelations && selectedRelations.length > 0
+                ? selectedRelations
+                : undefined
+            }
+            mergeRelations={mergeRelations}
+            unidirectional={unidirectional}
+            onNodeClick={onNodeClick}
+            direction={direction}
+            relationPairs={relationPairs}
+            entityFilter={entityFilter}
+            className={classes.graph}
+            zoom="enabled"
+            curve={curve}
+          />
+        </Paper>
+      </Grid>
+    </Grid>
+  );
+  const filterAction = (
+    <ToggleButton
+      value="show filters"
+      selected={showFilters}
+      onChange={() => toggleShowFilters()}
+    >
+      <FilterListIcon /> {t('catalogGraphPage.filterToggleButtonTitle')}
+    </ToggleButton>
+  );
+  const headerActions = (
+    <>
+      {filterAction}
+      <SupportButton>
+        {t('catalogGraphPage.supportButtonDescription')}
+      </SupportButton>
+    </>
+  );
+  const subtitle = rootEntityNames.map(e => humanizeEntityRef(e)).join(', ');
+
+  if (props.headerVariant === 'bui') {
+    return (
+      <>
+        <HeaderPage
+          title={t('catalogGraphPage.title')}
+          subtitle={subtitle}
+          customActions={headerActions}
+        />
+        <Content stretch className={classes.content}>
+          {pageBody}
+        </Content>
+      </>
+    );
+  }
+
   return (
     <Page themeId="home">
-      <Header
-        title={t('catalogGraphPage.title')}
-        subtitle={rootEntityNames.map(e => humanizeEntityRef(e)).join(', ')}
-      />
+      <Header title={t('catalogGraphPage.title')} subtitle={subtitle} />
       <Content stretch className={classes.content}>
-        <ContentHeader
-          titleComponent={
-            <ToggleButton
-              value="show filters"
-              selected={showFilters}
-              onChange={() => toggleShowFilters()}
-            >
-              <FilterListIcon /> {t('catalogGraphPage.filterToggleButtonTitle')}
-            </ToggleButton>
-          }
-        >
+        <ContentHeader titleComponent={filterAction}>
           <SupportButton>
             {t('catalogGraphPage.supportButtonDescription')}
           </SupportButton>
         </ContentHeader>
-        <Grid container alignItems="stretch" className={classes.container}>
-          {showFilters && (
-            <Grid item xs={12} lg={2} className={classes.filters}>
-              <MaxDepthFilter value={maxDepth} onChange={setMaxDepth} />
-              <SelectedKindsFilter
-                value={selectedKinds}
-                onChange={setSelectedKinds}
-              />
-              <SelectedRelationsFilter
-                value={selectedRelations}
-                onChange={setSelectedRelations}
-              />
-              <DirectionFilter value={direction} onChange={setDirection} />
-              <CurveFilter value={curve} onChange={setCurve} />
-              <SwitchFilter
-                value={unidirectional}
-                onChange={setUnidirectional}
-                label={t('catalogGraphPage.simplifiedSwitchLabel')}
-              />
-              <SwitchFilter
-                value={mergeRelations}
-                onChange={setMergeRelations}
-                label={t('catalogGraphPage.mergeRelationsSwitchLabel')}
-              />
-            </Grid>
-          )}
-          <Grid item xs className={classes.fullHeight}>
-            <Paper className={classes.graphWrapper}>
-              <Typography
-                variant="caption"
-                color="textSecondary"
-                display="block"
-                className={classes.legend}
-              >
-                <ZoomOutMap className="icon" />{' '}
-                {t('catalogGraphPage.zoomOutDescription')}
-              </Typography>
-              <EntityRelationsGraph
-                {...props}
-                rootEntityNames={rootEntityNames}
-                maxDepth={maxDepth}
-                kinds={
-                  selectedKinds && selectedKinds.length > 0
-                    ? selectedKinds
-                    : undefined
-                }
-                relations={
-                  selectedRelations && selectedRelations.length > 0
-                    ? selectedRelations
-                    : undefined
-                }
-                mergeRelations={mergeRelations}
-                unidirectional={unidirectional}
-                onNodeClick={onNodeClick}
-                direction={direction}
-                relationPairs={relationPairs}
-                entityFilter={entityFilter}
-                className={classes.graph}
-                zoom="enabled"
-                curve={curve}
-              />
-            </Paper>
-          </Grid>
-        </Grid>
+        {pageBody}
       </Content>
     </Page>
   );
-};
+}
+
+export const CatalogGraphPage = (props: CatalogGraphPageProps) => (
+  <CatalogGraphPageContent {...props} headerVariant="legacy" />
+);
+
+export const NfsCatalogGraphPage = (props: CatalogGraphPageProps) => (
+  <CatalogGraphPageContent {...props} headerVariant="bui" />
+);

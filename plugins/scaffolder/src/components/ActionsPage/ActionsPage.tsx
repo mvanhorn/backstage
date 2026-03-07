@@ -31,13 +31,10 @@ import SearchIcon from '@material-ui/icons/Search';
 
 import { useApi, useRouteRef } from '@backstage/core-plugin-api';
 import {
-  Content,
   EmptyState,
   ErrorPanel,
-  Header,
   Link,
   MarkdownContent,
-  Page,
   Progress,
 } from '@backstage/core-components';
 import { ScaffolderPageContextMenu } from '@backstage/plugin-scaffolder-react/alpha';
@@ -52,6 +49,7 @@ import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 import { scaffolderTranslationRef } from '../../translation';
 import { Expanded, RenderSchema, SchemaRenderContext } from '../RenderSchema';
 import { ScaffolderUsageExamplesTable } from '../ScaffolderUsageExamplesTable';
+import { ScaffolderPageLayout } from '../ScaffolderPageLayout';
 
 const useStyles = makeStyles(theme => ({
   code: {
@@ -242,6 +240,7 @@ export type ActionsPageProps = {
     create?: boolean;
     templatingExtensions?: boolean;
   };
+  headerVariant?: 'legacy' | 'bui';
 };
 
 export const ActionsPage = (props: ActionsPageProps) => {
@@ -273,17 +272,17 @@ export const ActionsPage = (props: ActionsPageProps) => {
   };
 
   return (
-    <Page themeId="home">
-      <Header
-        pageTitleOverride={t('actionsPage.pageTitle')}
-        title={t('actionsPage.title')}
-        subtitle={t('actionsPage.subtitle')}
-      >
+    <ScaffolderPageLayout
+      themeId="home"
+      headerVariant={props.headerVariant}
+      pageTitleOverride={t('actionsPage.pageTitle')}
+      title={t('actionsPage.title')}
+      subtitle={t('actionsPage.subtitle')}
+      headerActions={
         <ScaffolderPageContextMenu {...scaffolderPageContextMenuProps} />
-      </Header>
-      <Content>
-        <ActionPageContent />
-      </Content>
-    </Page>
+      }
+    >
+      <ActionPageContent />
+    </ScaffolderPageLayout>
   );
 };

@@ -33,11 +33,10 @@ import WarningIcon from '@material-ui/icons/Warning';
 import {
   Content,
   EmptyState,
-  Header,
-  Page,
   Progress,
   ResponseErrorPanel,
 } from '@backstage/core-components';
+import { HeaderPage } from '@backstage/ui';
 import { useConsentSession } from './useConsentSession';
 import { configApiRef, useApi } from '@backstage/frontend-plugin-api';
 
@@ -91,10 +90,10 @@ const ConsentPageLayout = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <Page themeId="tool">
-    <Header title={title} />
+  <>
+    <HeaderPage title={title} />
     <Content>{children}</Content>
-  </Page>
+  </>
 );
 
 export const ConsentPage = () => {

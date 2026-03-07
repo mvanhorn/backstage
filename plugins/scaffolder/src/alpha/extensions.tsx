@@ -59,7 +59,7 @@ export const scaffolderPage = PageBlueprint.makeWithOverrides({
         const formFields = [...apiFormFields, ...loadedFormFields];
 
         return import('../components/Router/Router').then(m => (
-          <m.InternalRouter formFields={formFields} />
+          <m.InternalRouter formFields={formFields} headerVariant="bui" />
         ));
       },
     });

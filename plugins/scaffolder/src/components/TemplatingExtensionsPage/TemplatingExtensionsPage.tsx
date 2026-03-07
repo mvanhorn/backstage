@@ -29,12 +29,9 @@ import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 import { scaffolderTranslationRef } from '../../translation';
 
 import {
-  Content,
   EmptyState,
   ErrorPanel,
-  Header,
   Link,
-  Page,
   Progress,
 } from '@backstage/core-components';
 import { scaffolderApiRef } from '@backstage/plugin-scaffolder-react';
@@ -68,6 +65,7 @@ import {
   TemplateGlobalFunctions,
   TemplateGlobalValues,
 } from './TemplateGlobals';
+import { ScaffolderPageLayout } from '../ScaffolderPageLayout';
 
 const useStyles = makeStyles(theme => ({
   code: {
@@ -303,6 +301,7 @@ export type TemplatingExtensionsPageProps = {
     tasks?: boolean;
     create?: boolean;
   };
+  headerVariant?: 'legacy' | 'bui';
 };
 
 export const TemplatingExtensionsPage = (
@@ -337,17 +336,17 @@ export const TemplatingExtensionsPage = (
   const { t } = useTranslationRef(scaffolderTranslationRef);
 
   return (
-    <Page themeId="home">
-      <Header
-        pageTitleOverride={t('templatingExtensions.pageTitle')}
-        title={t('templatingExtensions.title')}
-        subtitle={t('templatingExtensions.subtitle')}
-      >
+    <ScaffolderPageLayout
+      themeId="home"
+      headerVariant={props.headerVariant}
+      pageTitleOverride={t('templatingExtensions.pageTitle')}
+      title={t('templatingExtensions.title')}
+      subtitle={t('templatingExtensions.subtitle')}
+      headerActions={
         <ScaffolderPageContextMenu {...scaffolderPageContextMenuProps} />
-      </Header>
-      <Content>
-        <TemplatingExtensionsPageContent linkLocal />
-      </Content>
-    </Page>
+      }
+    >
+      <TemplatingExtensionsPageContent linkLocal />
+    </ScaffolderPageLayout>
   );
 };

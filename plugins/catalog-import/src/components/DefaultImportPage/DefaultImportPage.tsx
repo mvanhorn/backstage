@@ -23,6 +23,7 @@ import {
 } from '@backstage/core-components';
 import { configApiRef, useApi } from '@backstage/core-plugin-api';
 import { useTranslationRef } from '@backstage/frontend-plugin-api';
+import { HeaderPage } from '@backstage/ui';
 import Grid from '@material-ui/core/Grid';
 import { useTheme } from '@material-ui/core/styles';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
@@ -52,17 +53,22 @@ export const DefaultImportPage = () => {
       <ImportStepper />
     </Grid>,
   ];
+  const headerTitle = t('defaultImportPage.headerTitle');
+  const supportAction = (
+    <SupportButton>
+      {t('defaultImportPage.supportTitle', { appTitle })}
+    </SupportButton>
+  );
+  const contentHeaderTitle = t('defaultImportPage.contentHeaderTitle', {
+    appTitle,
+  });
 
   return (
     <Page themeId="home">
-      <Header title={t('defaultImportPage.headerTitle')} />
+      <Header title={headerTitle} />
       <Content>
-        <ContentHeader
-          title={t('defaultImportPage.contentHeaderTitle', { appTitle })}
-        >
-          <SupportButton>
-            {t('defaultImportPage.supportTitle', { appTitle })}
-          </SupportButton>
+        <ContentHeader title={contentHeaderTitle}>
+          {supportAction}
         </ContentHeader>
 
         <Grid container spacing={2}>
@@ -70,5 +76,41 @@ export const DefaultImportPage = () => {
         </Grid>
       </Content>
     </Page>
+  );
+};
+
+export const NfsDefaultImportPage = () => {
+  const { t } = useTranslationRef(catalogImportTranslationRef);
+  const theme = useTheme();
+  const configApi = useApi(configApiRef);
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const appTitle = configApi.getOptionalString('app.title') || 'Backstage';
+
+  const contentItems = [
+    <Grid key={0} item xs={12} md={4} lg={6} xl={8}>
+      <ImportInfoCard />
+    </Grid>,
+
+    <Grid key={1} item xs={12} md={8} lg={6} xl={4}>
+      <ImportStepper />
+    </Grid>,
+  ];
+
+  return (
+    <>
+      <HeaderPage
+        title={t('defaultImportPage.contentHeaderTitle', { appTitle })}
+        customActions={
+          <SupportButton>
+            {t('defaultImportPage.supportTitle', { appTitle })}
+          </SupportButton>
+        }
+      />
+      <Content>
+        <Grid container spacing={2}>
+          {isMobile ? contentItems : contentItems.reverse()}
+        </Grid>
+      </Content>
+    </>
   );
 };

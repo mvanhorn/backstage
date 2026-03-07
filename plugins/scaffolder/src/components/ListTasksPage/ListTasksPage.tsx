@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 import {
-  Content,
   EmptyState,
   ErrorPanel,
-  Header,
   Link,
-  Page,
   Progress,
   Table,
 } from '@backstage/core-components';
@@ -48,6 +45,7 @@ import { ScaffolderPageContextMenu } from '@backstage/plugin-scaffolder-react/al
 import { useNavigate } from 'react-router-dom';
 import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 import { scaffolderTranslationRef } from '../../translation';
+import { ScaffolderPageLayout } from '../ScaffolderPageLayout';
 
 export interface MyTaskPageProps {
   initiallySelectedFilter?: 'owned' | 'all';
@@ -57,6 +55,7 @@ export interface MyTaskPageProps {
     create?: boolean;
     templatingExtensions?: boolean;
   };
+  headerVariant?: 'legacy' | 'bui';
 }
 
 const ListTaskPageContent = (props: MyTaskPageProps) => {
@@ -200,17 +199,17 @@ export const ListTasksPage = (props: MyTaskPageProps) => {
         : undefined,
   };
   return (
-    <Page themeId="home">
-      <Header
-        pageTitleOverride={t('listTaskPage.pageTitle')}
-        title={t('listTaskPage.title')}
-        subtitle={t('listTaskPage.subtitle')}
-      >
+    <ScaffolderPageLayout
+      themeId="home"
+      headerVariant={props.headerVariant}
+      pageTitleOverride={t('listTaskPage.pageTitle')}
+      title={t('listTaskPage.title')}
+      subtitle={t('listTaskPage.subtitle')}
+      headerActions={
         <ScaffolderPageContextMenu {...scaffolderPageContextMenuProps} />
-      </Header>
-      <Content>
-        <ListTaskPageContent {...props} />
-      </Content>
-    </Page>
+      }
+    >
+      <ListTaskPageContent {...props} />
+    </ScaffolderPageLayout>
   );
 };

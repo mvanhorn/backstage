@@ -77,11 +77,13 @@ const apiDocsExplorerPage = PageBlueprint.makeWithOverrides({
       path: '/api-docs',
       routeRef: rootRoute,
       loader: () =>
-        import('./components/ApiExplorerPage').then(m => (
-          <m.ApiExplorerIndexPage
-            initiallySelectedFilter={config.initiallySelectedFilter}
-          />
-        )),
+        import('./components/ApiExplorerPage/DefaultApiExplorerPage').then(
+          m => (
+            <m.NfsApiExplorerPage
+              initiallySelectedFilter={config.initiallySelectedFilter}
+            />
+          ),
+        ),
     });
   },
 });

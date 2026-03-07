@@ -15,6 +15,7 @@
  */
 import { useOutlet } from 'react-router-dom';
 import { DefaultSettingsPage } from '../DefaultSettingsPage';
+import { NfsDefaultSettingsPage } from '../DefaultSettingsPage/DefaultSettingsPage';
 import { useElementFilter } from '@backstage/core-plugin-api';
 import {
   SettingsLayoutProps,
@@ -48,6 +49,36 @@ export const SettingsPage = (props: { providerSettings?: JSX.Element }) => {
     <>
       {(layout.length !== 0 && layout) || (
         <DefaultSettingsPage tabs={tabs} providerSettings={providerSettings} />
+      )}
+    </>
+  );
+};
+
+export const NfsSettingsPage = (props: { providerSettings?: JSX.Element }) => {
+  const { providerSettings } = props;
+  const outlet = useOutlet();
+  const layout = useElementFilter(outlet, elements =>
+    elements
+      .selectByComponentData({
+        key: LAYOUT_DATA_KEY,
+      })
+      .getElements<SettingsLayoutProps>(),
+  );
+  const tabs = useElementFilter(outlet, elements =>
+    elements
+      .selectByComponentData({
+        key: LAYOUT_ROUTE_DATA_KEY,
+      })
+      .getElements<SettingsLayoutRouteProps>(),
+  );
+
+  return (
+    <>
+      {(layout.length !== 0 && layout) || (
+        <NfsDefaultSettingsPage
+          tabs={tabs}
+          providerSettings={providerSettings}
+        />
       )}
     </>
   );

@@ -84,22 +84,21 @@ export const PageLayout = SwappableComponentBlueprint.make({
           [tabs],
         );
 
-        if (tabsWithMatchStrategy) {
-          return (
-            <>
-              {!noHeader && (
-                <PluginHeader
-                  title={title}
-                  icon={icon}
-                  tabs={tabsWithMatchStrategy}
-                  customActions={headerActions}
-                />
-              )}
-              {children}
-            </>
-          );
+        if (noHeader) {
+          return <>{children}</>;
         }
-        return <>{children}</>;
+
+        return (
+          <>
+            <PluginHeader
+              title={title}
+              icon={icon}
+              tabs={tabsWithMatchStrategy}
+              customActions={headerActions}
+            />
+            {children}
+          </>
+        );
       },
     }),
 });

@@ -22,6 +22,7 @@ import {
   RoutedTabs,
   useSidebarPinState,
 } from '@backstage/core-components';
+import { HeaderPage } from '@backstage/ui';
 import {
   attachComponentData,
   useElementFilter,
@@ -77,6 +78,30 @@ export const SettingsLayout = (props: SettingsLayoutProps) => {
       {!isMobile && <Header title={title ?? t('settingsLayout.title')} />}
       <RoutedTabs routes={routes} />
     </Page>
+  );
+};
+
+export const NfsSettingsLayout = (props: SettingsLayoutProps) => {
+  const { title, children } = props;
+  const { isMobile } = useSidebarPinState();
+  const { t } = useTranslationRef(userSettingsTranslationRef);
+
+  const routes = useElementFilter(children, elements =>
+    elements
+      .selectByComponentData({
+        key: LAYOUT_ROUTE_DATA_KEY,
+        withStrictError:
+          'Child of SettingsLayout must be an SettingsLayout.Route',
+      })
+      .getElements<SettingsLayoutRouteProps>()
+      .map(child => child.props),
+  );
+
+  return (
+    <>
+      {!isMobile && <HeaderPage title={title ?? t('settingsLayout.title')} />}
+      <RoutedTabs routes={routes} />
+    </>
   );
 };
 

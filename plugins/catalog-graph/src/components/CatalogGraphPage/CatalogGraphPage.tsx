@@ -277,8 +277,7 @@ function CatalogGraphPageContent(
     return (
       <>
         <HeaderPage
-          title={t('catalogGraphPage.title')}
-          subtitle={subtitle}
+          title={subtitle || t('catalogGraphPage.title')}
           customActions={headerActions}
         />
         <Content stretch className={classes.content}>

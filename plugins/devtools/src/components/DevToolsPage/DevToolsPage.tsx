@@ -16,7 +16,6 @@
 
 import { useOutlet } from 'react-router-dom';
 import { DefaultDevToolsPage } from '../DefaultDevToolsPage';
-import { NfsDefaultDevToolsPage } from '../DefaultDevToolsPage/DefaultDevToolsPage';
 import { ReactElement } from 'react';
 
 /**
@@ -39,10 +38,4 @@ export const DevToolsPage = ({ contents }: DevToolsPageProps) => {
   const outlet = useOutlet();
 
   return <>{outlet || <DefaultDevToolsPage contents={contents} />}</>;
-};
-
-export const NfsDevToolsPage = ({ contents }: DevToolsPageProps) => {
-  const outlet = useOutlet();
-
-  return <>{outlet || <NfsDefaultDevToolsPage contents={contents} />}</>;
 };

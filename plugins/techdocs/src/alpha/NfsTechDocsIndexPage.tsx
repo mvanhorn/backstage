@@ -31,7 +31,7 @@ const NfsTechDocsPageWrapper: FC<{ children?: ReactNode }> = ({ children }) => {
 
   return (
     <>
-      <HeaderPage title="Documentation" subtitle={generatedSubtitle} />
+      <HeaderPage title={generatedSubtitle} />
       {children}
     </>
   );

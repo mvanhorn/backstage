@@ -235,7 +235,7 @@ function NotificationsPageContent(
   if (headerVariant === 'bui') {
     return (
       <>
-        <HeaderPage title={title} subtitle={subtitle} />
+        <HeaderPage title={subtitle || title} />
         {pageContent}
       </>
     );

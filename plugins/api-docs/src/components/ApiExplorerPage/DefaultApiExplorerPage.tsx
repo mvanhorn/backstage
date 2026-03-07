@@ -195,11 +195,7 @@ export const NfsApiExplorerPage = (props: DefaultApiExplorerPageProps) => {
 
   return (
     <>
-      <HeaderPage
-        title={t('defaultApiExplorerPage.title')}
-        subtitle={generatedSubtitle}
-        customActions={headerActions}
-      />
+      <HeaderPage title={generatedSubtitle} customActions={headerActions} />
       <Content>
         <ApiExplorerPageContent
           initiallySelectedFilter={initiallySelectedFilter}

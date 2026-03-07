@@ -14,23 +14,25 @@
  * limitations under the License.
  */
 
-import { DevToolsContentBlueprint } from '@backstage/plugin-devtools-react';
+import { SubPageBlueprint } from '@backstage/frontend-plugin-api';
+import { Content } from '@backstage/core-components';
 
 /**
  * DevTools content for catalog unprocessed entities.
  *
  * @alpha
  */
-export const unprocessedEntitiesDevToolsContent = DevToolsContentBlueprint.make(
-  {
-    disabled: true,
-    params: {
-      path: 'unprocessed-entities',
-      title: 'Unprocessed Entities',
-      loader: () =>
-        import('../components/UnprocessedEntities').then(m => (
+export const unprocessedEntitiesDevToolsContent = SubPageBlueprint.make({
+  attachTo: { id: 'page:devtools', input: 'pages' },
+  name: 'unprocessed-entities',
+  params: {
+    path: 'unprocessed-entities',
+    title: 'Unprocessed Entities',
+    loader: () =>
+      import('../components/UnprocessedEntities').then(m => (
+        <Content>
           <m.UnprocessedEntitiesContent />
-        )),
-    },
+        </Content>
+      )),
   },
-);
+});

@@ -19,7 +19,3 @@
  *
  * @packageDocumentation
  */
-export {
-  type DevToolsContentBlueprintParams,
-  DevToolsContentBlueprint,
-} from './devToolsContentBlueprint';

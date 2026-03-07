@@ -59,7 +59,6 @@
     "@backstage/errors": "workspace:^",
     "@backstage/frontend-plugin-api": "workspace:^",
     "@backstage/plugin-devtools-common": "workspace:^",
-    "@backstage/plugin-devtools-react": "workspace:^",
     "@backstage/plugin-permission-react": "workspace:^",
     "@backstage/ui": "workspace:^",
     "@material-ui/core": "^4.9.13",

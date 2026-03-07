@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import { ElementType, ReactNode } from 'react';
+import { ElementType, ReactNode, useMemo } from 'react';
 import { TabProps } from '@material-ui/core/Tab';
 import {
+  Content,
   Header,
   Page,
   RoutedTabs,
@@ -28,6 +29,13 @@ import {
   useElementFilter,
 } from '@backstage/core-plugin-api';
 import { useTranslationRef } from '@backstage/frontend-plugin-api';
+import { Helmet } from 'react-helmet';
+import {
+  matchRoutes,
+  useLocation,
+  useParams,
+  useRoutes,
+} from 'react-router-dom';
 import { userSettingsTranslationRef } from '../../translation';
 
 /** @public */
@@ -52,6 +60,78 @@ export type SettingsLayoutProps = {
   title?: string;
   subtitle?: string;
   children?: ReactNode;
+};
+
+const normalizePath = (path: string) =>
+  path !== '/' && path.endsWith('/') ? path.slice(0, -1) : path;
+
+const getTabsBasePath = (
+  pathname: string,
+  routes: SettingsLayoutRouteProps[],
+) => {
+  const normalizedPathname = normalizePath(pathname);
+  const relativeRoutePaths = routes
+    .map(route => route.path.replace(/^\/+|\/+$/g, ''))
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+
+  for (const routePath of relativeRoutePaths) {
+    const marker = `/${routePath}`;
+    const matchIndex = normalizedPathname.lastIndexOf(marker);
+
+    if (matchIndex === -1) {
+      continue;
+    }
+
+    const matchEndIndex = matchIndex + marker.length;
+    if (
+      matchEndIndex !== normalizedPathname.length &&
+      normalizedPathname[matchEndIndex] !== '/'
+    ) {
+      continue;
+    }
+
+    return normalizedPathname.slice(0, matchIndex) || '/';
+  }
+
+  return normalizedPathname || '/';
+};
+
+const useSelectedSubRoute = (
+  subRoutes: SettingsLayoutRouteProps[],
+): {
+  route?: SettingsLayoutRouteProps;
+  element?: JSX.Element;
+} => {
+  const params = useParams();
+
+  const routes = subRoutes.map(({ path, children }) => ({
+    caseSensitive: false,
+    path: `${path}/*`,
+    element: children,
+  }));
+
+  const sortedRoutes = routes.sort((a, b) =>
+    b.path.replace(/\/\*$/, '').localeCompare(a.path.replace(/\/\*$/, '')),
+  );
+
+  const element = useRoutes(sortedRoutes) ?? subRoutes[0]?.children;
+
+  let currentRoute = params['*'] ?? '';
+  if (!currentRoute.startsWith('/')) {
+    currentRoute = `/${currentRoute}`;
+  }
+
+  const [matchedRoute] = matchRoutes(sortedRoutes, currentRoute) ?? [];
+  const foundIndex = matchedRoute
+    ? subRoutes.findIndex(t => `${t.path}/*` === matchedRoute.route.path)
+    : 0;
+  const route = subRoutes[foundIndex === -1 ? 0 : foundIndex] ?? subRoutes[0];
+
+  return {
+    route,
+    element,
+  };
 };
 
 /**
@@ -85,6 +165,7 @@ export const NfsSettingsLayout = (props: SettingsLayoutProps) => {
   const { title, children } = props;
   const { isMobile } = useSidebarPinState();
   const { t } = useTranslationRef(userSettingsTranslationRef);
+  const location = useLocation();
 
   const routes = useElementFilter(children, elements =>
     elements
@@ -96,11 +177,30 @@ export const NfsSettingsLayout = (props: SettingsLayoutProps) => {
       .getElements<SettingsLayoutRouteProps>()
       .map(child => child.props),
   );
+  const { route, element } = useSelectedSubRoute(routes);
+  const tabs = useMemo(() => {
+    const basePath = getTabsBasePath(location.pathname, routes);
+
+    return routes.map(subRoute => ({
+      id: subRoute.path,
+      label: subRoute.title,
+      href: subRoute.path.startsWith('/')
+        ? subRoute.path
+        : `${basePath}/${subRoute.path}`.replace(/\/{2,}/g, '/'),
+      matchStrategy: 'prefix' as const,
+    }));
+  }, [location.pathname, routes]);
 
   return (
     <>
-      {!isMobile && <HeaderPage title={title ?? t('settingsLayout.title')} />}
-      <RoutedTabs routes={routes} />
+      {!isMobile && <HeaderPage tabs={tabs} />}
+      {isMobile && <RoutedTabs routes={routes} />}
+      {!isMobile && (
+        <Content>
+          <Helmet title={route?.title} />
+          {element}
+        </Content>
+      )}
     </>
   );
 };

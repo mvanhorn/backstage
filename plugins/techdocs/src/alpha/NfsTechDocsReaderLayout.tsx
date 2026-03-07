@@ -17,6 +17,7 @@
 import { PropsWithChildren, useEffect } from 'react';
 import Helmet from 'react-helmet';
 import Grid from '@material-ui/core/Grid';
+import Box from '@material-ui/core/Box';
 import Skeleton from '@material-ui/lab/Skeleton';
 import CodeIcon from '@material-ui/icons/Code';
 import capitalize from 'lodash/capitalize';
@@ -160,13 +161,7 @@ const NfsTechDocsReaderPageHeader = (props: PropsWithChildren<{}>) => {
         <title>{tabTitle}</title>
       </Helmet>
       <HeaderPage
-        title={
-          <>
-            <div>{title || skeleton}</div>
-            <div>{labels}</div>
-          </>
-        }
-        subtitle={subtitle === '' ? undefined : subtitle || skeleton}
+        title={title || ''}
         customActions={
           <>
             {children}
@@ -174,6 +169,15 @@ const NfsTechDocsReaderPageHeader = (props: PropsWithChildren<{}>) => {
           </>
         }
       />
+      {(subtitle ||
+        metadataLoading ||
+        entityMetadataLoading ||
+        entityMetadata) && (
+        <Box mt={2}>
+          {subtitle !== '' ? subtitle || skeleton : null}
+          {entityMetadata && <Box mt={subtitle === '' ? 0 : 1}>{labels}</Box>}
+        </Box>
+      )}
     </>
   );
 };

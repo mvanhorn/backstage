@@ -56,13 +56,16 @@ export const ScaffolderPageLayout = (props: ScaffolderPageLayoutProps) => {
   );
 
   if (headerVariant === 'bui') {
+    let buiTitle: string | undefined;
+    if (typeof title === 'string') {
+      buiTitle = title;
+    } else if (typeof subtitle === 'string') {
+      buiTitle = subtitle;
+    }
+
     return (
       <>
-        <HeaderPage
-          title={title}
-          subtitle={subtitle}
-          customActions={headerActions}
-        />
+        <HeaderPage title={buiTitle} customActions={headerActions} />
         {pageContent}
       </>
     );

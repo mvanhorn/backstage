@@ -49,7 +49,6 @@ import {
   EntityRefLink,
   InspectEntityDialog,
   UnregisterEntityDialog,
-  EntityDisplayName,
   FavoriteEntity,
 } from '@backstage/plugin-catalog-react';
 
@@ -103,25 +102,6 @@ const useStyles = makeStyles(theme => ({
     },
   },
 }));
-
-function EntityHeaderTitle() {
-  const { entity } = useAsyncEntity();
-  const { kind, namespace, name } = useRouteRefParams(entityRouteRef);
-  const { headerTitle: title } = headerProps(kind, namespace, name, entity);
-  return (
-    <Box display="inline-flex" alignItems="center" height="1em" maxWidth="100%">
-      <Box
-        component="span"
-        textOverflow="ellipsis"
-        whiteSpace="nowrap"
-        overflow="hidden"
-      >
-        {entity ? <EntityDisplayName entityRef={entity} hideIcon /> : title}
-      </Box>
-      {entity && <FavoriteEntity entity={entity} />}
-    </Box>
-  );
-}
 
 function EntityHeaderSubtitle(props: { parentEntityRelations?: string[] }) {
   const { parentEntityRelations } = props;
@@ -194,6 +174,8 @@ export function EntityHeader(props: {
     subtitle,
   } = props;
   const { entity } = useAsyncEntity();
+  const { kind, namespace, name } = useRouteRefParams(entityRouteRef);
+  const { headerTitle } = headerProps(kind, namespace, name, entity);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -250,40 +232,40 @@ export function EntityHeader(props: {
   );
 
   const inspectDialogOpen = typeof selectedInspectEntityDialogTab === 'string';
-  const headerTitle = (
-    <Box display="flex" flexDirection="column">
-      {title ?? <EntityHeaderTitle />}
-      {entity && (
-        <Box mt={1}>
-          <EntityLabels entity={entity} />
-        </Box>
-      )}
-    </Box>
+  const headerSubtitle = subtitle ?? (
+    <EntityHeaderSubtitle parentEntityRelations={parentEntityRelations} />
   );
+  const renderedTitle = typeof title === 'string' ? title : headerTitle;
 
   return (
     <>
       <HeaderPage
-        title={headerTitle}
-        subtitle={
-          subtitle ?? (
-            <EntityHeaderSubtitle
-              parentEntityRelations={parentEntityRelations}
-            />
-          )
-        }
+        title={renderedTitle}
         customActions={
           entity ? (
-            <EntityContextMenu
-              UNSTABLE_extraContextMenuItems={UNSTABLE_extraContextMenuItems}
-              UNSTABLE_contextMenuOptions={UNSTABLE_contextMenuOptions}
-              contextMenuItems={contextMenuItems}
-              onInspectEntity={openInspectEntityDialog}
-              onUnregisterEntity={openUnregisterEntityDialog}
-            />
+            <>
+              <FavoriteEntity entity={entity} />
+              <EntityContextMenu
+                UNSTABLE_extraContextMenuItems={UNSTABLE_extraContextMenuItems}
+                UNSTABLE_contextMenuOptions={UNSTABLE_contextMenuOptions}
+                contextMenuItems={contextMenuItems}
+                onInspectEntity={openInspectEntityDialog}
+                onUnregisterEntity={openUnregisterEntityDialog}
+              />
+            </>
           ) : undefined
         }
       />
+      {(headerSubtitle || entity) && (
+        <Box mt={2}>
+          {headerSubtitle}
+          {entity && (
+            <Box mt={headerSubtitle ? 1 : 0}>
+              <EntityLabels entity={entity} />
+            </Box>
+          )}
+        </Box>
+      )}
       {entity && (
         <>
           <InspectEntityDialog

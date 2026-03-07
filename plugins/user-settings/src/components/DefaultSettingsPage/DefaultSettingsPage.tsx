@@ -19,10 +19,7 @@ import { UserSettingsAuthProviders } from '../AuthProviders';
 import { UserSettingsFeatureFlags } from '../FeatureFlags';
 import { UserSettingsGeneral } from '../General';
 import { SettingsLayoutRouteProps } from '../SettingsLayout';
-import {
-  NfsSettingsLayout,
-  SettingsLayout,
-} from '../SettingsLayout/SettingsLayout';
+import { SettingsLayout } from '../SettingsLayout/SettingsLayout';
 import { useTranslationRef } from '@backstage/frontend-plugin-api';
 import { userSettingsTranslationRef } from '../../translation';
 
@@ -58,37 +55,5 @@ export const DefaultSettingsPage = (props: {
       </SettingsLayout.Route>
       {tabs}
     </SettingsLayout>
-  );
-};
-
-export const NfsDefaultSettingsPage = (props: {
-  tabs?: ReactElement<SettingsLayoutRouteProps>[];
-  providerSettings?: JSX.Element;
-}) => {
-  const { providerSettings, tabs } = props;
-  const { t } = useTranslationRef(userSettingsTranslationRef);
-
-  return (
-    <NfsSettingsLayout>
-      <SettingsLayout.Route
-        path="general"
-        title={t('defaultSettingsPage.tabsTitle.general')}
-      >
-        <UserSettingsGeneral />
-      </SettingsLayout.Route>
-      <SettingsLayout.Route
-        path="auth-providers"
-        title={t('defaultSettingsPage.tabsTitle.authProviders')}
-      >
-        <UserSettingsAuthProviders providerSettings={providerSettings} />
-      </SettingsLayout.Route>
-      <SettingsLayout.Route
-        path="feature-flags"
-        title={t('defaultSettingsPage.tabsTitle.featureFlags')}
-      >
-        <UserSettingsFeatureFlags />
-      </SettingsLayout.Route>
-      {tabs}
-    </NfsSettingsLayout>
   );
 };

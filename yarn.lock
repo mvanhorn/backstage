@@ -5561,7 +5561,6 @@ __metadata:
     "@backstage/errors": "workspace:^"
     "@backstage/frontend-plugin-api": "workspace:^"
     "@backstage/plugin-catalog-unprocessed-entities-common": "workspace:^"
-    "@backstage/plugin-devtools-react": "workspace:^"
     "@backstage/ui": "workspace:^"
     "@material-ui/core": "npm:^4.9.13"
     "@material-ui/icons": "npm:^4.9.1"
@@ -5725,7 +5724,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@backstage/plugin-devtools-react@workspace:^, @backstage/plugin-devtools-react@workspace:plugins/devtools-react":
+"@backstage/plugin-devtools-react@workspace:plugins/devtools-react":
   version: 0.0.0-use.local
   resolution: "@backstage/plugin-devtools-react@workspace:plugins/devtools-react"
   dependencies:
@@ -5763,7 +5762,6 @@ __metadata:
     "@backstage/errors": "workspace:^"
     "@backstage/frontend-plugin-api": "workspace:^"
     "@backstage/plugin-devtools-common": "workspace:^"
-    "@backstage/plugin-devtools-react": "workspace:^"
     "@backstage/plugin-permission-react": "workspace:^"
     "@backstage/ui": "workspace:^"
     "@material-ui/core": "npm:^4.9.13"

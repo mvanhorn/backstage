@@ -108,6 +108,7 @@ function EntityHeaderSubtitle(props: { parentEntityRelations?: string[] }) {
   const classes = useStyles();
   const { entity } = useAsyncEntity();
   const { name } = useRouteRefParams(entityRouteRef);
+  const entityName = entity?.metadata.title ?? name;
   const parentEntity = findParentRelation(
     entity?.relations ?? [],
     parentEntityRelations ?? [],
@@ -131,7 +132,7 @@ function EntityHeaderSubtitle(props: { parentEntityRelations?: string[] }) {
         <EntityRefLink entityRef={ancestorEntity.targetRef} disableTooltip />
       )}
       <EntityRefLink entityRef={parentEntity.targetRef} disableTooltip />
-      {name}
+      {entityName}
     </Breadcrumbs>
   ) : null;
 }
@@ -232,6 +233,7 @@ export function EntityHeader(props: {
   );
 
   const inspectDialogOpen = typeof selectedInspectEntityDialogTab === 'string';
+  const customTitle = typeof title === 'string' ? undefined : title;
   const headerSubtitle = subtitle ?? (
     <EntityHeaderSubtitle parentEntityRelations={parentEntityRelations} />
   );
@@ -256,11 +258,12 @@ export function EntityHeader(props: {
           ) : undefined
         }
       />
-      {(headerSubtitle || entity) && (
+      {(customTitle || headerSubtitle || entity) && (
         <Box mt={2}>
+          {customTitle}
           {headerSubtitle}
           {entity && (
-            <Box mt={headerSubtitle ? 1 : 0}>
+            <Box mt={customTitle || headerSubtitle ? 1 : 0}>
               <EntityLabels entity={entity} />
             </Box>
           )}

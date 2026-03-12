@@ -22,6 +22,7 @@ import {
   JSX,
 } from 'react';
 import {
+  ExtensionBoundary,
   coreExtensionData,
   discoveryApiRef,
   fetchApiRef,
@@ -84,7 +85,7 @@ export const AppRoot = createExtension({
     ),
   },
   output: [coreExtensionData.reactElement],
-  factory({ inputs, apis }) {
+  factory({ inputs, apis, node }) {
     if (isProtectedApp()) {
       const identityApi = apis.get(identityApiRef);
       if (!identityApi) {
@@ -123,19 +124,21 @@ export const AppRoot = createExtension({
 
     return [
       coreExtensionData.reactElement(
-        <AppRouter
-          SignInPageComponent={inputs.signInPage?.get(
-            SignInPageBlueprint.dataRefs.component,
-          )}
-          RouterComponent={inputs.router?.get(
-            RouterBlueprint.dataRefs.component,
-          )}
-          extraElements={inputs.elements?.map(el =>
-            el.get(coreExtensionData.reactElement),
-          )}
-        >
-          {content}
-        </AppRouter>,
+        <ExtensionBoundary node={node}>
+          <AppRouter
+            SignInPageComponent={inputs.signInPage?.get(
+              SignInPageBlueprint.dataRefs.component,
+            )}
+            RouterComponent={inputs.router?.get(
+              RouterBlueprint.dataRefs.component,
+            )}
+            extraElements={inputs.elements?.map(el =>
+              el.get(coreExtensionData.reactElement),
+            )}
+          >
+            {content}
+          </AppRouter>
+        </ExtensionBoundary>,
       ),
     ];
   },

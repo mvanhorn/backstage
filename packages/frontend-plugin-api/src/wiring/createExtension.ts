@@ -548,13 +548,18 @@ export function createExtension<
         );
       }
 
+      let ifPredicate = options.if;
+      if ('if' in overrideOptions) {
+        ifPredicate = overrideOptions.if;
+      }
+
       return createExtension({
         kind: options.kind,
         name: options.name,
         attachTo: (overrideOptions.attachTo ??
           options.attachTo) as ExtensionDefinitionAttachTo,
         disabled: overrideOptions.disabled ?? options.disabled,
-        if: overrideOptions.if ?? options.if,
+        if: ifPredicate,
         inputs: bindInputs(
           {
             ...(options.inputs ?? {}),

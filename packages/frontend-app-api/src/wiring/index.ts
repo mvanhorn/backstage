@@ -21,6 +21,8 @@ export {
   type PrepareSpecializedAppOptions,
   type PreparedSpecializedApp,
   type SpecializedAppSessionState,
+} from './prepareSpecializedApp';
+export {
   createSpecializedApp,
   type CreateSpecializedAppOptions,
 } from './createSpecializedApp';

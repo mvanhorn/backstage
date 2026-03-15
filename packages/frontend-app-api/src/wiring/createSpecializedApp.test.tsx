@@ -32,12 +32,12 @@ import {
   createExtensionDataRef,
 } from '@backstage/frontend-plugin-api';
 import { act, render, screen } from '@testing-library/react';
+import { createSpecializedApp } from './createSpecializedApp';
 import {
-  createSpecializedApp,
   FinalizedSpecializedApp,
   prepareSpecializedApp,
   PreparedSpecializedApp,
-} from './createSpecializedApp';
+} from './prepareSpecializedApp';
 import { mockApis, TestApiRegistry } from '@backstage/test-utils';
 import {
   configApiRef,

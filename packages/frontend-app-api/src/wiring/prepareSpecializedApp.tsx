@@ -32,7 +32,6 @@ import {
   RouteFunc,
   RouteResolutionApi,
   createApiFactory,
-  createApiRef,
   routeResolutionApiRef,
   AppNode,
   AppNodeInstance,
@@ -44,10 +43,6 @@ import {
   identityApiRef,
   createExtensionDataRef,
 } from '@backstage/frontend-plugin-api';
-import type {
-  EvaluatePermissionRequest,
-  EvaluatePermissionResponse,
-} from '@backstage/plugin-permission-common';
 import { FilterPredicate } from '@backstage/filter-predicates';
 import {
   createExtensionDataContainer,
@@ -99,6 +94,12 @@ import {
   createErrorCollector,
   ErrorCollector,
 } from './createErrorCollector';
+import {
+  collectPredicateReferences,
+  createPredicateContextLoader,
+  EMPTY_PREDICATE_CONTEXT,
+  type ExtensionPredicateContext,
+} from './predicates';
 import {
   FrontendApiRegistry,
   FrontendApiResolver,
@@ -167,20 +168,10 @@ type FinalizationState = {
   reject(error: unknown): void;
 };
 
-type ExtensionPredicateContext = {
-  featureFlags: string[];
-  permissions: string[];
-};
-
 type InternalSpecializedAppSessionState = {
   apis: ApiHolder;
   identityApi?: IdentityApi;
   predicateContext: ExtensionPredicateContext;
-};
-
-const EMPTY_PREDICATE_CONTEXT: ExtensionPredicateContext = {
-  featureFlags: [],
-  permissions: [],
 };
 
 /**
@@ -437,17 +428,6 @@ export type PreparedSpecializedApp = {
   }): FinalizedSpecializedApp;
 };
 
-// Minimal local permission API interface to avoid a dependency on @backstage/plugin-permission-react
-type MinimalPermissionApi = {
-  authorize(
-    request: EvaluatePermissionRequest,
-  ): Promise<EvaluatePermissionResponse>;
-};
-
-const localPermissionApiRef = createApiRef<MinimalPermissionApi>({
-  id: 'plugin.permission.api',
-});
-
 // Internal options type, not exported in the public API
 export interface CreateSpecializedAppInternalOptions
   extends PrepareSpecializedAppOptions {
@@ -523,7 +503,7 @@ export function prepareSpecializedApp(
     tree,
     collector,
   });
-  const predicateReferences = collectPredicateReferences(tree);
+  const predicateReferences = collectPredicateReferences(tree.nodes.values());
   const appApiRegistry = new FrontendApiRegistry();
   const internalStaticFactories =
     internalOptions?.__internal?.apiFactoryOverrides ?? [];
@@ -560,6 +540,10 @@ export function prepareSpecializedApp(
     routeBindings,
     staticFactories: phaseStaticFactories,
   });
+  const predicateContextLoader = createPredicateContextLoader({
+    apis: phase.apis,
+    predicateReferences,
+  });
   const state: {
     signInRuntime?: SignInRuntime;
     cachedSessionState?: SpecializedAppSessionState;
@@ -586,61 +570,6 @@ export function prepareSpecializedApp(
     });
   }
 
-  function getActiveFeatureFlags() {
-    const featureFlagsApi = phase.apis.get(featureFlagsApiRef);
-    if (!featureFlagsApi) {
-      return [];
-    }
-
-    return predicateReferences.featureFlags.filter(name =>
-      featureFlagsApi.isActive(name),
-    );
-  }
-
-  function getImmediatePredicateContext():
-    | ExtensionPredicateContext
-    | undefined {
-    if (predicateReferences.permissions.length > 0) {
-      const permissionApi = phase.apis.get(localPermissionApiRef);
-      if (permissionApi) {
-        return undefined;
-      }
-    }
-
-    return {
-      featureFlags: getActiveFeatureFlags(),
-      permissions: [],
-    };
-  }
-
-  async function createPredicateContext() {
-    const immediatePredicateContext = getImmediatePredicateContext();
-    if (immediatePredicateContext) {
-      return immediatePredicateContext;
-    }
-
-    let allowedPermissions: string[] = [];
-    const permissionApi = phase.apis.get(localPermissionApiRef);
-    if (permissionApi) {
-      const permNames = predicateReferences.permissions;
-      const responses = await Promise.all(
-        permNames.map(name =>
-          permissionApi.authorize({
-            permission: { name, type: 'basic', attributes: {} },
-          }),
-        ),
-      );
-      allowedPermissions = permNames.filter(
-        (_, i) => responses[i].result === 'ALLOW',
-      );
-    }
-
-    return {
-      featureFlags: getActiveFeatureFlags(),
-      permissions: allowedPermissions,
-    };
-  }
-
   function createSessionState(predicateContext: ExtensionPredicateContext) {
     const identityApi =
       state.signInRuntime?.readyIdentityApi ?? providedSessionData?.identityApi;
@@ -662,7 +591,7 @@ export function prepareSpecializedApp(
       return undefined;
     }
 
-    const predicateContext = getImmediatePredicateContext();
+    const predicateContext = predicateContextLoader.getImmediate();
     if (!predicateContext) {
       return undefined;
     }
@@ -692,7 +621,8 @@ export function prepareSpecializedApp(
       );
     }
 
-    state.sessionStatePromise = createPredicateContext()
+    state.sessionStatePromise = predicateContextLoader
+      .load()
       .then(predicateContext => {
         if (state.cachedSessionState) {
           return state.cachedSessionState;
@@ -1586,29 +1516,6 @@ function classifyBootstrapTree(options: {
   };
 }
 
-function collectPredicateReferences(tree: AppTree): ExtensionPredicateContext {
-  const featureFlags = new Set<string>();
-  const permissions = new Set<string>();
-
-  for (const node of tree.nodes.values()) {
-    if (node.spec.if === undefined) {
-      continue;
-    }
-
-    for (const name of extractFeatureFlagNames(node.spec.if)) {
-      featureFlags.add(name);
-    }
-    for (const name of extractPermissionNames(node.spec.if)) {
-      permissions.add(name);
-    }
-  }
-
-  return {
-    featureFlags: Array.from(featureFlags),
-    permissions: Array.from(permissions),
-  };
-}
-
 function subtreeContainsPredicate(root: AppNode) {
   const visited = new Set<AppNode>();
 
@@ -1685,54 +1592,4 @@ function mergeExtensionFactoryMiddleware(
       }, ctx);
     };
   });
-}
-
-/**
- * Recursively walks a FilterPredicate and returns all string values referenced
- * by `featureFlags: { $contains: '...' }` expressions. This lets us call
- * `isActive()` only for the flags that are actually used in predicates rather
- * than fetching the full registered-flag list.
- */
-function extractFeatureFlagNames(predicate: FilterPredicate): string[] {
-  return extractPredicateKeyNames(predicate, 'featureFlags');
-}
-
-/**
- * Recursively walks a FilterPredicate and returns all string values referenced
- * by `permissions: { $contains: '...' }` expressions. This lets us issue a
- * single batched authorize call for only the permissions actually referenced.
- */
-function extractPermissionNames(predicate: FilterPredicate): string[] {
-  return extractPredicateKeyNames(predicate, 'permissions');
-}
-
-function extractPredicateKeyNames(
-  predicate: FilterPredicate,
-  key: string,
-): string[] {
-  if (typeof predicate !== 'object' || predicate === null) {
-    return [];
-  }
-  const obj = predicate as Record<string, unknown>;
-  if (Array.isArray(obj.$all)) {
-    return (obj.$all as FilterPredicate[]).flatMap(p =>
-      extractPredicateKeyNames(p, key),
-    );
-  }
-  if (Array.isArray(obj.$any)) {
-    return (obj.$any as FilterPredicate[]).flatMap(p =>
-      extractPredicateKeyNames(p, key),
-    );
-  }
-  if (obj.$not !== undefined) {
-    return extractPredicateKeyNames(obj.$not as FilterPredicate, key);
-  }
-  const value = obj[key];
-  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-    const contains = (value as Record<string, unknown>).$contains;
-    if (typeof contains === 'string') {
-      return [contains];
-    }
-  }
-  return [];
 }

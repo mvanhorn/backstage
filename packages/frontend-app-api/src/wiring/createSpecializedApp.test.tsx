@@ -31,7 +31,7 @@ import {
   analyticsApiRef,
   createExtensionDataRef,
 } from '@backstage/frontend-plugin-api';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import {
   createSpecializedApp,
   FinalizedSpecializedApp,
@@ -1302,6 +1302,7 @@ describe('createSpecializedApp', () => {
           }),
         ],
       });
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
 
       const preparedApp = prepareSpecializedApp({
         features: [
@@ -1314,9 +1315,7 @@ describe('createSpecializedApp', () => {
                   function SignInPage(props: {
                     onSignInSuccess(identity: IdentityApi): void;
                   }) {
-                    useEffect(() => {
-                      props.onSignInSuccess(identityApi);
-                    }, [props]);
+                    onSignInSuccess = props.onSignInSuccess;
                     return <div>Custom Sign In</div>;
                   }
 
@@ -1333,7 +1332,15 @@ describe('createSpecializedApp', () => {
         screen.findByText('Custom Sign In'),
       ).resolves.toBeInTheDocument();
 
-      const finalizedApp = await waitForFinalizedApp(preparedApp);
+      const finalizedAppPromise = waitForFinalizedApp(preparedApp);
+      if (!onSignInSuccess) {
+        throw new Error('Expected sign-in success callback to be captured');
+      }
+      act(() => {
+        onSignInSuccess(identityApi);
+      });
+
+      const finalizedApp = await finalizedAppPromise;
       expect(appLayoutFactory).toHaveBeenCalledTimes(1);
       render(
         finalizedApp.tree.root.instance!.getData(
@@ -1378,6 +1385,7 @@ describe('createSpecializedApp', () => {
           }),
         ],
       });
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
 
       const preparedApp = prepareSpecializedApp({
         features: [
@@ -1390,9 +1398,7 @@ describe('createSpecializedApp', () => {
                   function SignInPage(props: {
                     onSignInSuccess(identity: IdentityApi): void;
                   }) {
-                    useEffect(() => {
-                      props.onSignInSuccess(identityApi);
-                    }, [props]);
+                    onSignInSuccess = props.onSignInSuccess;
                     return <div>Custom Sign In</div>;
                   }
 
@@ -1409,7 +1415,15 @@ describe('createSpecializedApp', () => {
         screen.findByText('Custom Sign In'),
       ).resolves.toBeInTheDocument();
 
-      const finalizedApp = await waitForFinalizedApp(preparedApp);
+      const finalizedAppPromise = waitForFinalizedApp(preparedApp);
+      if (!onSignInSuccess) {
+        throw new Error('Expected sign-in success callback to be captured');
+      }
+      act(() => {
+        onSignInSuccess(identityApi);
+      });
+
+      const finalizedApp = await finalizedAppPromise;
       render(
         finalizedApp.tree.root.instance!.getData(
           coreExtensionData.reactElement,
@@ -1447,6 +1461,7 @@ describe('createSpecializedApp', () => {
           }),
         ],
       });
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
 
       const preparedApp = prepareSpecializedApp({
         features: [
@@ -1467,9 +1482,7 @@ describe('createSpecializedApp', () => {
                   function SignInPage(props: {
                     onSignInSuccess(identity: IdentityApi): void;
                   }) {
-                    useEffect(() => {
-                      props.onSignInSuccess(identityApi);
-                    }, [props]);
+                    onSignInSuccess = props.onSignInSuccess;
                     return <div>Custom Sign In</div>;
                   }
 
@@ -1486,7 +1499,15 @@ describe('createSpecializedApp', () => {
         screen.findByText('Custom Sign In'),
       ).resolves.toBeInTheDocument();
 
-      const finalizedApp = await waitForFinalizedApp(preparedApp);
+      const finalizedAppPromise = waitForFinalizedApp(preparedApp);
+      if (!onSignInSuccess) {
+        throw new Error('Expected sign-in success callback to be captured');
+      }
+      act(() => {
+        onSignInSuccess(identityApi);
+      });
+
+      const finalizedApp = await finalizedAppPromise;
       expect(featureFlagsApi.isActive).toHaveBeenCalledWith('test-flag');
       expect(featureFlagsApi.isActive).toHaveBeenCalledTimes(1);
       render(
@@ -1744,7 +1765,9 @@ describe('createSpecializedApp', () => {
       if (!onSignInSuccess) {
         throw new Error('Expected sign-in success callback to be captured');
       }
-      onSignInSuccess(identityApi);
+      act(() => {
+        onSignInSuccess(identityApi);
+      });
       expect(() => preparedApp.finalize()).toThrow(
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
       );

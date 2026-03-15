@@ -32,7 +32,7 @@ import {
   FrontendPluginInfo,
 } from '@backstage/frontend-plugin-api';
 import { ThemeBlueprint } from '@backstage/plugin-app-react';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { createApp } from './createApp';
 import { mockApis, renderWithEffects } from '@backstage/test-utils';
 import {
@@ -229,6 +229,7 @@ describe('createApp', () => {
       getRegisteredFlags: () => [],
       save: jest.fn(),
     } as unknown as typeof featureFlagsApiRef.T;
+    let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
 
     const app = createApp({
       advanced: {
@@ -252,9 +253,7 @@ describe('createApp', () => {
                 function SignInPage(props: {
                   onSignInSuccess(identity: IdentityApi): void;
                 }) {
-                  useEffect(() => {
-                    props.onSignInSuccess(identityApi);
-                  }, [props]);
+                  onSignInSuccess = props.onSignInSuccess;
 
                   return <div>Custom Sign In</div>;
                 }
@@ -281,6 +280,16 @@ describe('createApp', () => {
     });
 
     await renderWithEffects(app.createRoot());
+    await expect(
+      screen.findByText('Custom Sign In'),
+    ).resolves.toBeInTheDocument();
+    if (!onSignInSuccess) {
+      throw new Error('Expected sign-in success callback to be captured');
+    }
+    const triggerSignInSuccess = onSignInSuccess;
+    act(() => {
+      triggerSignInSuccess(identityApi);
+    });
 
     await expect(
       screen.findByText(/Error in app/),

@@ -152,11 +152,21 @@ function PreparedAppRoot(props: {
   const [finalizedApp, setFinalizedApp] = useState<
     FinalizedSpecializedApp | undefined
   >();
+  const [bootstrapError, setBootstrapError] = useState<Error | undefined>();
 
   useEffect(
-    () => props.preparedApp.onFinalized(setFinalizedApp),
+    () => props.preparedApp.onFinalized(setFinalizedApp, setBootstrapError),
     [props.preparedApp],
   );
+
+  if (bootstrapError) {
+    return (
+      <>
+        <div>{bootstrapError.message}</div>
+        <h1>Error in app</h1>
+      </>
+    );
+  }
 
   if (!finalizedApp) {
     return bootstrapApp.element;

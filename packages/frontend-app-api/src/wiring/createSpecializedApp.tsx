@@ -316,6 +316,53 @@ class RouteResolutionApiProxy implements RouteResolutionApi {
   }
 }
 
+class PreparedAppIdentityProxy extends AppIdentityProxy {
+  #onTargetSet?:
+    | ((
+        identityApi: Parameters<AppIdentityProxy['setTarget']>[0],
+      ) => Promise<void> | void)
+    | undefined;
+  #onTargetError?: ((error: unknown) => void) | undefined;
+
+  setTargetHandlers(options: {
+    onTargetSet?(
+      identityApi: Parameters<AppIdentityProxy['setTarget']>[0],
+    ): Promise<void> | void;
+    onTargetError?(error: unknown): void;
+  }) {
+    this.#onTargetSet = options.onTargetSet;
+    this.#onTargetError = options.onTargetError;
+  }
+
+  clearTargetHandlers() {
+    this.#onTargetSet = undefined;
+    this.#onTargetError = undefined;
+  }
+
+  override setTarget(
+    identityApi: Parameters<AppIdentityProxy['setTarget']>[0],
+    targetOptions: Parameters<AppIdentityProxy['setTarget']>[1],
+  ) {
+    super.setTarget(identityApi, targetOptions);
+
+    const onTargetSet = this.#onTargetSet;
+    if (!onTargetSet) {
+      return;
+    }
+
+    const onTargetError = this.#onTargetError;
+    this.clearTargetHandlers();
+
+    try {
+      void Promise.resolve(onTargetSet(identityApi)).catch(error => {
+        onTargetError?.(error);
+      });
+    } catch (error) {
+      onTargetError?.(error);
+    }
+  }
+}
+
 /**
  * Options for {@link prepareSpecializedApp}.
  *
@@ -437,7 +484,10 @@ export type CreateSpecializedAppOptions = {
  */
 export type PreparedSpecializedApp = {
   getBootstrapApp(): BootstrapSpecializedApp;
-  onFinalized(callback: (app: FinalizedSpecializedApp) => void): () => void;
+  onFinalized(
+    callback: (app: FinalizedSpecializedApp) => void,
+    onError?: (error: Error) => void,
+  ): () => void;
   finalize(options?: {
     sessionState?: SpecializedAppSessionState;
   }): FinalizedSpecializedApp;
@@ -844,6 +894,19 @@ export function prepareSpecializedApp(
     const runtime: SignInRuntime = {
       requiresSignIn: false,
     };
+    if (!providedSessionState) {
+      phase.identityApiProxy.setTargetHandlers({
+        onTargetSet(identityApi) {
+          return beginFinalization(
+            startSignInFinalize(runtime, identityApi),
+          ).then(() => {});
+        },
+        onTargetError(error) {
+          reportBootstrapFailure(error);
+        },
+      });
+    }
+
     const result = createBootstrapApp({
       tree,
       apis: phase.apis,
@@ -875,12 +938,10 @@ export function prepareSpecializedApp(
           apiRefId,
         });
       },
-      onSignInSuccess(identityApi) {
-        return beginFinalization(
-          startSignInFinalize(runtime, identityApi),
-        ).then(() => {});
-      },
     });
+    if (!result.requiresSignIn) {
+      phase.identityApiProxy.clearTargetHandlers();
+    }
 
     runtime.requiresSignIn = result.requiresSignIn;
     state.signInRuntime = runtime;
@@ -891,10 +952,22 @@ export function prepareSpecializedApp(
 
   return {
     getBootstrapApp,
-    onFinalized(callback) {
+    onFinalized(callback, onError) {
       getBootstrapApp();
 
       let subscribed = true;
+
+      if (state.bootstrapError) {
+        const bootstrapError = state.bootstrapError;
+        Promise.resolve().then(() => {
+          if (subscribed) {
+            onError?.(bootstrapError);
+          }
+        });
+        return () => {
+          subscribed = false;
+        };
+      }
 
       if (state.finalized) {
         const finalizedApp = state.finalized;
@@ -917,7 +990,11 @@ export function prepareSpecializedApp(
             callback(finalizedApp);
           }
         })
-        .catch(() => {});
+        .catch(error => {
+          if (subscribed) {
+            onError?.(asError(error));
+          }
+        });
 
       return () => {
         subscribed = false;
@@ -1062,32 +1139,6 @@ type BootstrapClassification = {
   deferredRoots: Set<AppNode>;
 };
 
-function extractSignInPageComponent(options: {
-  tree: AppTree;
-  apis: ApiHolder;
-  collector: ErrorCollector;
-  extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
-  onMissingApi?(ctx: { node: AppNode; apiRefId: string }): void;
-}): ComponentType<SignInPageProps> | undefined {
-  const appRootNode = options.tree.nodes.get('app/root');
-  const signInPageNode = appRootNode?.edges.attachments.get('signInPage')?.[0];
-  if (!signInPageNode) {
-    return undefined;
-  }
-
-  instantiateAppNodeTree(
-    signInPageNode,
-    options.apis,
-    options.collector,
-    options.extensionFactoryMiddleware,
-    {
-      onMissingApi: options.onMissingApi,
-    },
-  );
-
-  return signInPageNode.instance?.getData(signInPageComponentDataRef);
-}
-
 function createBootstrapApp(options: {
   tree: AppTree;
   apis: ApiHolder;
@@ -1104,26 +1155,13 @@ function createBootstrapApp(options: {
     child: AppNode;
   }): boolean;
   onMissingApi?(ctx: { node: AppNode; apiRefId: string }): void;
-  onSignInSuccess(identityApi: IdentityApi): Promise<void>;
 }): {
   bootstrapApp: BootstrapSpecializedApp;
   requiresSignIn: boolean;
 } {
-  const signInPageComponent = options.disableSignIn
-    ? undefined
-    : extractSignInPageComponent({
-        tree: options.tree,
-        apis: options.apis,
-        collector: options.collector,
-        extensionFactoryMiddleware: options.extensionFactoryMiddleware,
-      });
-  if (signInPageComponent) {
-    prepareSignInTree({
-      tree: options.tree,
-      signInPageComponent,
-      onSignInSuccess: options.onSignInSuccess,
-    });
-  }
+  const signInPageNode = getAppRootNode(options.tree)?.edges.attachments.get(
+    'signInPage',
+  )?.[0];
 
   instantiateAndInitializePhaseTree({
     tree: options.tree,
@@ -1154,7 +1192,9 @@ function createBootstrapApp(options: {
       element,
       tree: options.tree,
     },
-    requiresSignIn: Boolean(signInPageComponent),
+    requiresSignIn:
+      !options.disableSignIn &&
+      Boolean(signInPageNode?.instance?.getData(signInPageComponentDataRef)),
   };
 }
 
@@ -1173,7 +1213,7 @@ function createPhaseApis(options: {
     options.routeBindings,
     options.appBasePath,
   );
-  const identityProxy = new AppIdentityProxy();
+  const identityProxy = new PreparedAppIdentityProxy();
   const phaseApiRegistry = new FrontendApiRegistry();
   phaseApiRegistry.registerAll([
     createApiFactory(appTreeApiRef, appTreeApi),
@@ -1245,50 +1285,6 @@ function instantiateAndInitializePhaseTree(options: {
     options.routeRefsById.routes,
   );
   options.appTreeApi.initialize(routeInfo);
-}
-
-function prepareSignInTree(options: {
-  tree: AppTree;
-  signInPageComponent: ComponentType<SignInPageProps>;
-  onSignInSuccess(identityApi: IdentityApi): Promise<void>;
-}) {
-  const appRootNode = getAppRootNode(options.tree);
-  if (!appRootNode) {
-    return;
-  }
-
-  const signInPageNode = appRootNode.edges.attachments.get('signInPage')?.[0];
-  if (!signInPageNode) {
-    return;
-  }
-
-  setNodeInstance(
-    signInPageNode,
-    createSyntheticDataRefInstance(
-      signInPageComponentDataRef,
-      (() => {
-        const SignInPageComponent = options.signInPageComponent;
-        return function PreparedSignInPage(props: SignInPageProps) {
-          const [signInError, setSignInError] = useState<Error>();
-
-          if (signInError) {
-            throw signInError;
-          }
-
-          return (
-            <SignInPageComponent
-              {...props}
-              onSignInSuccess={identityApi => {
-                void options.onSignInSuccess(identityApi).catch(error => {
-                  setSignInError(asError(error));
-                });
-              }}
-            />
-          );
-        };
-      })(),
-    ),
-  );
 }
 
 function prepareFinalizedTree(options: { tree: AppTree }) {
@@ -1379,23 +1375,6 @@ function getFinalizationBoundaryNodes(tree: AppTree): AppNode[] {
 
 function isSessionBoundaryAttachment(node: AppNode, input: string) {
   return node.spec.id === 'app/root' && input === 'children';
-}
-
-function createSyntheticDataRefInstance<T>(
-  ref: ExtensionDataRef<T>,
-  value: T,
-): AppNodeInstance {
-  return {
-    getDataRefs() {
-      return [ref][Symbol.iterator]();
-    },
-    getData<TValue>(dataRef: ExtensionDataRef<TValue>) {
-      if (dataRef.id !== ref.id) {
-        return undefined;
-      }
-      return value as unknown as TValue;
-    },
-  };
 }
 
 function createReactElementOverrideInstance(

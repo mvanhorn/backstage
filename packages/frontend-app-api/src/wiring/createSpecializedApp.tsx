@@ -579,22 +579,42 @@ export function prepareSpecializedApp(
     });
   }
 
-  async function createPredicateContext() {
+  function getActiveFeatureFlags() {
     const featureFlagsApi = phase.apis.get(featureFlagsApiRef);
-    let allowedPermissions: string[] = [];
+    if (!featureFlagsApi) {
+      return [];
+    }
+
+    return predicateReferences.featureFlags.filter(name =>
+      featureFlagsApi.isActive(name),
+    );
+  }
+
+  function getImmediatePredicateContext():
+    | ExtensionPredicateContext
+    | undefined {
     if (predicateReferences.permissions.length > 0) {
       const permissionApi = phase.apis.get(localPermissionApiRef);
-      if (!permissionApi) {
-        return {
-          featureFlags: featureFlagsApi
-            ? predicateReferences.featureFlags.filter(name =>
-                featureFlagsApi.isActive(name),
-              )
-            : [],
-          permissions: allowedPermissions,
-        };
+      if (permissionApi) {
+        return undefined;
       }
+    }
 
+    return {
+      featureFlags: getActiveFeatureFlags(),
+      permissions: [],
+    };
+  }
+
+  async function createPredicateContext() {
+    const immediatePredicateContext = getImmediatePredicateContext();
+    if (immediatePredicateContext) {
+      return immediatePredicateContext;
+    }
+
+    let allowedPermissions: string[] = [];
+    const permissionApi = phase.apis.get(localPermissionApiRef);
+    if (permissionApi) {
       const permNames = predicateReferences.permissions;
       const responses = await Promise.all(
         permNames.map(name =>
@@ -609,11 +629,7 @@ export function prepareSpecializedApp(
     }
 
     return {
-      featureFlags: featureFlagsApi
-        ? predicateReferences.featureFlags.filter(name =>
-            featureFlagsApi.isActive(name),
-          )
-        : [],
+      featureFlags: getActiveFeatureFlags(),
       permissions: allowedPermissions,
     };
   }
@@ -631,9 +647,26 @@ export function prepareSpecializedApp(
     return sessionState;
   }
 
-  function getSessionState() {
+  function getImmediateSessionState() {
     if (cachedSessionState) {
-      return Promise.resolve(cachedSessionState);
+      return cachedSessionState;
+    }
+    if (signInRuntime?.requiresSignIn) {
+      return undefined;
+    }
+
+    const predicateContext = getImmediatePredicateContext();
+    if (!predicateContext) {
+      return undefined;
+    }
+
+    return createSessionState(predicateContext);
+  }
+
+  function getSessionState() {
+    const immediateSessionState = getImmediateSessionState();
+    if (immediateSessionState) {
+      return Promise.resolve(immediateSessionState);
     }
     if (sessionStatePromise) {
       return sessionStatePromise;
@@ -913,10 +946,15 @@ export function prepareSpecializedApp(
         cachedSessionState ??
         (signInRuntime?.requiresSignIn
           ? undefined
-          : createSessionState(EMPTY_PREDICATE_CONTEXT));
+          : getImmediateSessionState());
       if (!finalizedSessionState) {
+        if (signInRuntime?.requiresSignIn) {
+          throw new Error(
+            'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
+          );
+        }
         throw new Error(
-          'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
+          'prepareSpecializedApp requires waiting for asynchronous finalization before calling finalize()',
         );
       }
 

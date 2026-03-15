@@ -930,6 +930,80 @@ describe('createSpecializedApp', () => {
       expect(screen.getByText('Prepared')).toBeInTheDocument();
     });
 
+    it('should synchronously finalize feature flag predicates without sign-in', async () => {
+      const featureFlagsApi = {
+        isActive: jest.fn((name: string) => name === 'test-flag'),
+        registerFlag: jest.fn(),
+        getRegisteredFlags: () => [],
+        save: jest.fn(),
+      } as unknown as typeof featureFlagsApiRef.T;
+      const noSignInAppPlugin = appPluginOriginal.withOverrides({
+        extensions: [
+          appPluginOriginal
+            .getExtension('sign-in-page:app')
+            .override({ disabled: true }),
+        ],
+      });
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          createFrontendPlugin({
+            pluginId: 'test',
+            featureFlags: [{ name: 'test-flag' }],
+            extensions: [
+              createExtension({
+                name: 'bootstrap-element',
+                attachTo: { id: 'app/root', input: 'elements' },
+                output: [coreExtensionData.reactElement],
+                factory: () => [
+                  coreExtensionData.reactElement(<div>Bootstrap Element</div>),
+                ],
+              }),
+              createExtension({
+                name: 'deferred-element',
+                attachTo: { id: 'app/root', input: 'elements' },
+                if: { featureFlags: { $contains: 'test-flag' } },
+                output: [coreExtensionData.reactElement],
+                factory: () => [
+                  coreExtensionData.reactElement(<div>Deferred Element</div>),
+                ],
+              }),
+            ],
+          }),
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              ApiBlueprint.make({
+                params: defineParams =>
+                  defineParams({
+                    api: featureFlagsApiRef,
+                    deps: {},
+                    factory: () => featureFlagsApi,
+                  }),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      renderPreparedBootstrap(preparedApp);
+
+      expect(screen.getByText('Bootstrap Element')).toBeInTheDocument();
+      expect(screen.queryByText('Deferred Element')).not.toBeInTheDocument();
+
+      const finalizedApp = preparedApp.finalize();
+      render(
+        finalizedApp.tree.root.instance!.getData(
+          coreExtensionData.reactElement,
+        ),
+      );
+
+      expect(featureFlagsApi.isActive).toHaveBeenCalledWith('test-flag');
+      await expect(
+        screen.findByText('Deferred Element'),
+      ).resolves.toBeInTheDocument();
+    });
+
     it('should defer app root children until finalize', async () => {
       const identityApi = {
         getProfileInfo: async () => ({ displayName: 'Test User' }),

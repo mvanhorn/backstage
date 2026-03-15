@@ -1625,7 +1625,30 @@ function syncFinalApiFactories(options: {
     const bootstrapEntry = options.bootstrapApiFactoryEntries.find(
       candidate => candidate.factory.api.id === entry.factory.api.id,
     );
-    return bootstrapEntry?.factory !== entry.factory;
+    if (!bootstrapEntry) {
+      return true;
+    }
+    if (bootstrapEntry.factory === entry.factory) {
+      return false;
+    }
+    if (options.apiResolver.isMaterialized(entry.factory.api.id)) {
+      options.collector.report({
+        code: 'EXTENSION_BOOTSTRAP_API_OVERRIDE_IGNORED',
+        message:
+          `Extension '${entry.node.spec.id}' tried to override API ` +
+          `'${entry.factory.api.id}' after it had already been materialized during bootstrap. ` +
+          'The bootstrap implementation was kept and the deferred override was ignored.',
+        context: {
+          node: entry.node,
+          apiRefId: entry.factory.api.id,
+          bootstrapNode: bootstrapEntry.node,
+          pluginId: entry.pluginId,
+          bootstrapPluginId: bootstrapEntry.pluginId,
+        },
+      });
+      return false;
+    }
+    return true;
   });
   const changedFactories = changedEntries.map(entry =>
     wrapFeatureFlagApiFactory(entry.factory, options.features),

@@ -1073,6 +1073,214 @@ describe('createSpecializedApp', () => {
       expect(deferredApiNode?.instance).toBeDefined();
     });
 
+    it('should ignore deferred overrides of materialized bootstrap APIs', () => {
+      const apiRef = createApiRef<{ value: string }>({
+        id: 'test.bootstrap-frozen-api',
+      });
+      let bootstrapApiValue: string | undefined;
+      let finalApiValue: string | undefined;
+      const featureFlagsApi = {
+        isActive: jest.fn((name: string) => name === 'test-flag'),
+        registerFlag: jest.fn(),
+        getRegisteredFlags: () => [],
+        save: jest.fn(),
+      } as unknown as typeof featureFlagsApiRef.T;
+      const noSignInAppPlugin = appPluginOriginal.withOverrides({
+        extensions: [
+          appPluginOriginal
+            .getExtension('sign-in-page:app')
+            .override({ disabled: true }),
+        ],
+      });
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          createFrontendPlugin({
+            pluginId: 'test',
+            featureFlags: [{ name: 'test-flag' }],
+            extensions: [
+              ApiBlueprint.make({
+                name: 'bootstrap-api',
+                params: defineParams =>
+                  defineParams({
+                    api: apiRef,
+                    deps: {},
+                    factory: () => ({ value: 'bootstrap' }),
+                  }),
+              }),
+              ApiBlueprint.make({
+                name: 'deferred-api',
+                params: defineParams =>
+                  defineParams({
+                    api: apiRef,
+                    deps: {},
+                    factory: () => ({ value: 'final' }),
+                  }),
+              }).override({
+                if: { featureFlags: { $contains: 'test-flag' } },
+              }),
+              createExtension({
+                name: 'bootstrap-reader',
+                attachTo: { id: 'app/root', input: 'elements' },
+                output: [coreExtensionData.reactElement],
+                factory: ({ apis }) => {
+                  bootstrapApiValue = apis.get(apiRef)?.value;
+                  return [
+                    coreExtensionData.reactElement(<div>Bootstrap Reader</div>),
+                  ];
+                },
+              }),
+              createExtension({
+                name: 'final-reader',
+                attachTo: { id: 'app/root', input: 'elements' },
+                if: { featureFlags: { $contains: 'test-flag' } },
+                output: [coreExtensionData.reactElement],
+                factory: ({ apis }) => {
+                  finalApiValue = apis.get(apiRef)?.value;
+                  return [
+                    coreExtensionData.reactElement(<div>Final Reader</div>),
+                  ];
+                },
+              }),
+            ],
+          }),
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              ApiBlueprint.make({
+                params: defineParams =>
+                  defineParams({
+                    api: featureFlagsApiRef,
+                    deps: {},
+                    factory: () => featureFlagsApi,
+                  }),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      renderPreparedBootstrap(preparedApp);
+      expect(bootstrapApiValue).toBe('bootstrap');
+
+      const finalizedApp = preparedApp.finalize();
+
+      expect(featureFlagsApi.isActive).toHaveBeenCalledWith('test-flag');
+      expect(finalApiValue).toBe('bootstrap');
+      expect(finalizedApp.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: 'EXTENSION_BOOTSTRAP_API_OVERRIDE_IGNORED',
+            context: expect.objectContaining({
+              apiRefId: apiRef.id,
+            }),
+          }),
+        ]),
+      );
+    });
+
+    it('should allow deferred overrides of bootstrap APIs that were not materialized', () => {
+      const apiRef = createApiRef<{ value: string }>({
+        id: 'test.bootstrap-overridable-api',
+      });
+      let finalApiValue: string | undefined;
+      const featureFlagsApi = {
+        isActive: jest.fn((name: string) => name === 'test-flag'),
+        registerFlag: jest.fn(),
+        getRegisteredFlags: () => [],
+        save: jest.fn(),
+      } as unknown as typeof featureFlagsApiRef.T;
+      const noSignInAppPlugin = appPluginOriginal.withOverrides({
+        extensions: [
+          appPluginOriginal
+            .getExtension('sign-in-page:app')
+            .override({ disabled: true }),
+        ],
+      });
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          createFrontendPlugin({
+            pluginId: 'test',
+            featureFlags: [{ name: 'test-flag' }],
+            extensions: [
+              ApiBlueprint.make({
+                name: 'bootstrap-api',
+                params: defineParams =>
+                  defineParams({
+                    api: apiRef,
+                    deps: {},
+                    factory: () => ({ value: 'bootstrap' }),
+                  }),
+              }),
+              ApiBlueprint.make({
+                name: 'deferred-api',
+                params: defineParams =>
+                  defineParams({
+                    api: apiRef,
+                    deps: {},
+                    factory: () => ({ value: 'final' }),
+                  }),
+              }).override({
+                if: { featureFlags: { $contains: 'test-flag' } },
+              }),
+              createExtension({
+                name: 'bootstrap-element',
+                attachTo: { id: 'app/root', input: 'elements' },
+                output: [coreExtensionData.reactElement],
+                factory: () => [
+                  coreExtensionData.reactElement(<div>Bootstrap Element</div>),
+                ],
+              }),
+              createExtension({
+                name: 'final-reader',
+                attachTo: { id: 'app/root', input: 'elements' },
+                if: { featureFlags: { $contains: 'test-flag' } },
+                output: [coreExtensionData.reactElement],
+                factory: ({ apis }) => {
+                  finalApiValue = apis.get(apiRef)?.value;
+                  return [
+                    coreExtensionData.reactElement(<div>Final Reader</div>),
+                  ];
+                },
+              }),
+            ],
+          }),
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              ApiBlueprint.make({
+                params: defineParams =>
+                  defineParams({
+                    api: featureFlagsApiRef,
+                    deps: {},
+                    factory: () => featureFlagsApi,
+                  }),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      renderPreparedBootstrap(preparedApp);
+      expect(screen.getByText('Bootstrap Element')).toBeInTheDocument();
+
+      const finalizedApp = preparedApp.finalize();
+
+      expect(featureFlagsApi.isActive).toHaveBeenCalledWith('test-flag');
+      expect(finalApiValue).toBe('final');
+      expect(finalizedApp.errors ?? []).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: 'EXTENSION_BOOTSTRAP_API_OVERRIDE_IGNORED',
+            context: expect.objectContaining({
+              apiRefId: apiRef.id,
+            }),
+          }),
+        ]),
+      );
+    });
+
     it('should defer app root children until finalize', async () => {
       const identityApi = {
         getProfileInfo: async () => ({ displayName: 'Test User' }),

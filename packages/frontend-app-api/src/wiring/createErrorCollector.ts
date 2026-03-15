@@ -88,6 +88,15 @@ export type AppErrorTypes = {
   EXTENSION_BOOTSTRAP_API_UNAVAILABLE: {
     context: { node: AppNode; apiRefId: string };
   };
+  EXTENSION_BOOTSTRAP_API_OVERRIDE_IGNORED: {
+    context: {
+      node: AppNode;
+      apiRefId: string;
+      bootstrapNode: AppNode;
+      pluginId: string;
+      bootstrapPluginId: string;
+    };
+  };
   // routing
   ROUTE_DUPLICATE: {
     context: { routeId: string };

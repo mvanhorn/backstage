@@ -90,6 +90,10 @@ export class FrontendApiResolver implements ApiHolder {
     return this.load(ref);
   }
 
+  isMaterialized(apiRefId: string) {
+    return this.apis.has(apiRefId);
+  }
+
   invalidate(apiRefIds?: Iterable<string>) {
     if (apiRefIds === undefined) {
       this.apis.clear();

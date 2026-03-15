@@ -556,9 +556,19 @@ export function prepareSpecializedApp(
     routeBindings,
     staticFactories: phaseStaticFactories,
   });
-  let signInRuntime: SignInRuntime | undefined;
-  let cachedSessionState = providedSessionState;
-  let sessionStatePromise: Promise<SpecializedAppSessionState> | undefined;
+  const state: {
+    signInRuntime?: SignInRuntime;
+    cachedSessionState?: SpecializedAppSessionState;
+    sessionStatePromise?: Promise<SpecializedAppSessionState>;
+    finalized?: FinalizedSpecializedApp;
+    bootstrapApp?: BootstrapSpecializedApp;
+    bootstrapError?: Error;
+    finalizationState?: FinalizationState;
+    bootstrapErrorReporter?: (error: Error) => void;
+    pendingBootstrapError?: Error;
+  } = {
+    cachedSessionState: providedSessionState,
+  };
 
   function updateIdentityApiTarget(identityApi?: IdentityApi) {
     if (!identityApi) {
@@ -629,22 +639,22 @@ export function prepareSpecializedApp(
 
   function createSessionState(predicateContext: ExtensionPredicateContext) {
     const identityApi =
-      signInRuntime?.readyIdentityApi ?? providedSessionData?.identityApi;
+      state.signInRuntime?.readyIdentityApi ?? providedSessionData?.identityApi;
     updateIdentityApiTarget(identityApi);
     const sessionState = OpaqueSpecializedAppSessionState.createInstance('v1', {
       apis: phase.apis,
       identityApi,
       predicateContext,
     });
-    cachedSessionState = sessionState;
+    state.cachedSessionState = sessionState;
     return sessionState;
   }
 
   function getImmediateSessionState() {
-    if (cachedSessionState) {
-      return cachedSessionState;
+    if (state.cachedSessionState) {
+      return state.cachedSessionState;
     }
-    if (signInRuntime?.requiresSignIn) {
+    if (state.signInRuntime?.requiresSignIn) {
       return undefined;
     }
 
@@ -661,13 +671,16 @@ export function prepareSpecializedApp(
     if (immediateSessionState) {
       return Promise.resolve(immediateSessionState);
     }
-    if (sessionStatePromise) {
-      return sessionStatePromise;
+    if (state.sessionStatePromise) {
+      return state.sessionStatePromise;
     }
-    if (signInRuntime?.error) {
-      return Promise.reject(signInRuntime.error);
+    if (state.signInRuntime?.error) {
+      return Promise.reject(state.signInRuntime.error);
     }
-    if (signInRuntime?.requiresSignIn && !signInRuntime.readyIdentityApi) {
+    if (
+      state.signInRuntime?.requiresSignIn &&
+      !state.signInRuntime.readyIdentityApi
+    ) {
       return Promise.reject(
         new Error(
           'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
@@ -675,19 +688,19 @@ export function prepareSpecializedApp(
       );
     }
 
-    sessionStatePromise = createPredicateContext()
+    state.sessionStatePromise = createPredicateContext()
       .then(predicateContext => {
-        if (cachedSessionState) {
-          return cachedSessionState;
+        if (state.cachedSessionState) {
+          return state.cachedSessionState;
         }
         return createSessionState(predicateContext);
       })
       .catch(error => {
-        sessionStatePromise = undefined;
+        state.sessionStatePromise = undefined;
         throw error;
       });
 
-    return sessionStatePromise;
+    return state.sessionStatePromise;
   }
 
   function startSignInFinalize(
@@ -701,21 +714,14 @@ export function prepareSpecializedApp(
     });
   }
 
-  let finalized: FinalizedSpecializedApp | undefined;
-  let bootstrapApp: BootstrapSpecializedApp | undefined;
-  let bootstrapError: Error | undefined;
-  let finalizationState: FinalizationState | undefined;
-  let bootstrapErrorReporter: ((error: Error) => void) | undefined;
-  let pendingBootstrapError: Error | undefined;
-
   function finalizeFromSessionState(
     finalizedSessionState: SpecializedAppSessionState,
   ): FinalizedSpecializedApp {
-    if (finalized) {
-      return finalized;
+    if (state.finalized) {
+      return state.finalized;
     }
 
-    cachedSessionState = finalizedSessionState;
+    state.cachedSessionState = finalizedSessionState;
     const sessionStateData = OpaqueSpecializedAppSessionState.toInternal(
       finalizedSessionState,
     );
@@ -759,24 +765,24 @@ export function prepareSpecializedApp(
       tree,
       errors: collector.collectErrors(),
     };
-    finalized = finalizedApp;
+    state.finalized = finalizedApp;
     return finalizedApp;
   }
 
   function reportBootstrapFailure(error: unknown) {
     const bootstrapFailure = asError(error);
-    bootstrapError = bootstrapFailure;
-    if (bootstrapErrorReporter) {
-      bootstrapErrorReporter(bootstrapFailure);
+    state.bootstrapError = bootstrapFailure;
+    if (state.bootstrapErrorReporter) {
+      state.bootstrapErrorReporter(bootstrapFailure);
       return;
     }
 
-    pendingBootstrapError = bootstrapFailure;
+    state.pendingBootstrapError = bootstrapFailure;
   }
 
   function getFinalizationState(): FinalizationState {
-    if (finalizationState) {
-      return finalizationState;
+    if (state.finalizationState) {
+      return state.finalizationState;
     }
 
     let resolve: ((app: FinalizedSpecializedApp) => void) | undefined;
@@ -789,50 +795,50 @@ export function prepareSpecializedApp(
       throw new Error('Failed to create finalization state');
     }
 
-    finalizationState = {
+    state.finalizationState = {
       started: false,
       promise,
       resolve,
       reject,
     };
-    return finalizationState;
+    return state.finalizationState;
   }
 
   function beginFinalization(
     loader: Promise<SpecializedAppSessionState>,
   ): Promise<FinalizedSpecializedApp> {
-    if (finalized) {
-      return Promise.resolve(finalized);
+    if (state.finalized) {
+      return Promise.resolve(state.finalized);
     }
-    const state = getFinalizationState();
-    if (state.started) {
-      return state.promise;
+    const finalization = getFinalizationState();
+    if (finalization.started) {
+      return finalization.promise;
     }
-    state.started = true;
+    finalization.started = true;
 
     void loader
       .then(sessionState => {
         const finalizedApp = finalizeFromSessionState(sessionState);
-        state.resolve(finalizedApp);
+        finalization.resolve(finalizedApp);
       })
       .catch(error => {
-        finalizationState = undefined;
+        state.finalizationState = undefined;
 
-        if (signInRuntime?.requiresSignIn) {
-          state.reject(error);
+        if (state.signInRuntime?.requiresSignIn) {
+          finalization.reject(error);
           return;
         }
 
         reportBootstrapFailure(error);
-        state.reject(bootstrapError);
+        finalization.reject(state.bootstrapError);
       });
 
-    return state.promise;
+    return finalization.promise;
   }
 
   function getBootstrapApp() {
-    if (bootstrapApp) {
-      return bootstrapApp;
+    if (state.bootstrapApp) {
+      return state.bootstrapApp;
     }
 
     const runtime: SignInRuntime = {
@@ -848,15 +854,15 @@ export function prepareSpecializedApp(
       extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
       disableSignIn: Boolean(providedSessionState),
       registerBootstrapErrorReporter(reporter) {
-        bootstrapErrorReporter = reporter;
-        if (pendingBootstrapError) {
-          reporter(pendingBootstrapError);
-          pendingBootstrapError = undefined;
+        state.bootstrapErrorReporter = reporter;
+        if (state.pendingBootstrapError) {
+          reporter(state.pendingBootstrapError);
+          state.pendingBootstrapError = undefined;
         }
 
         return () => {
-          if (bootstrapErrorReporter === reporter) {
-            bootstrapErrorReporter = undefined;
+          if (state.bootstrapErrorReporter === reporter) {
+            state.bootstrapErrorReporter = undefined;
           }
         };
       },
@@ -877,10 +883,10 @@ export function prepareSpecializedApp(
     });
 
     runtime.requiresSignIn = result.requiresSignIn;
-    signInRuntime = runtime;
-    bootstrapApp = result.bootstrapApp;
+    state.signInRuntime = runtime;
+    state.bootstrapApp = result.bootstrapApp;
 
-    return bootstrapApp;
+    return state.bootstrapApp;
   }
 
   return {
@@ -890,8 +896,8 @@ export function prepareSpecializedApp(
 
       let subscribed = true;
 
-      if (finalized) {
-        const finalizedApp = finalized;
+      if (state.finalized) {
+        const finalizedApp = state.finalized;
         Promise.resolve().then(() => {
           if (subscribed) {
             callback(finalizedApp);
@@ -902,7 +908,7 @@ export function prepareSpecializedApp(
         };
       }
 
-      const finalizedAppPromise = signInRuntime?.requiresSignIn
+      const finalizedAppPromise = state.signInRuntime?.requiresSignIn
         ? getFinalizationState().promise
         : beginFinalization(getSessionState());
       void finalizedAppPromise
@@ -918,29 +924,29 @@ export function prepareSpecializedApp(
       };
     },
     finalize(finalizeOptions?: { sessionState?: SpecializedAppSessionState }) {
-      if (finalized) {
-        return finalized;
+      if (state.finalized) {
+        return state.finalized;
       }
 
-      if (bootstrapError) {
-        throw bootstrapError;
+      if (state.bootstrapError) {
+        throw state.bootstrapError;
       }
-      if (signInRuntime?.error && !signInRuntime.requiresSignIn) {
-        throw signInRuntime.error;
+      if (state.signInRuntime?.error && !state.signInRuntime.requiresSignIn) {
+        throw state.signInRuntime.error;
       }
 
-      if (!finalizeOptions?.sessionState && !cachedSessionState) {
+      if (!finalizeOptions?.sessionState && !state.cachedSessionState) {
         getBootstrapApp();
       }
 
       const finalizedSessionState =
         finalizeOptions?.sessionState ??
-        cachedSessionState ??
-        (signInRuntime?.requiresSignIn
+        state.cachedSessionState ??
+        (state.signInRuntime?.requiresSignIn
           ? undefined
           : getImmediateSessionState());
       if (!finalizedSessionState) {
-        if (signInRuntime?.requiresSignIn) {
+        if (state.signInRuntime?.requiresSignIn) {
           throw new Error(
             'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
           );
@@ -950,9 +956,9 @@ export function prepareSpecializedApp(
         );
       }
 
-      finalized = finalizeFromSessionState(finalizedSessionState);
-      finalizationState?.resolve(finalized);
-      return finalized;
+      state.finalized = finalizeFromSessionState(finalizedSessionState);
+      state.finalizationState?.resolve(state.finalized);
+      return state.finalized;
     },
   };
 }

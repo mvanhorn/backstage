@@ -48,7 +48,10 @@ import type {
   EvaluatePermissionRequest,
   EvaluatePermissionResponse,
 } from '@backstage/plugin-permission-common';
-import { FilterPredicate } from '@backstage/filter-predicates';
+import {
+  evaluateFilterPredicate,
+  FilterPredicate,
+} from '@backstage/filter-predicates';
 import {
   createExtensionDataContainer,
   OpaqueFrontendPlugin,
@@ -81,7 +84,10 @@ import { Root } from '../extensions/Root';
 import { resolveAppTree } from '../tree/resolveAppTree';
 import { resolveAppNodeSpecs } from '../tree/resolveAppNodeSpecs';
 import { readAppExtensionsConfig } from '../tree/readAppExtensionsConfig';
-import { instantiateAppNodeTree } from '../tree/instantiateAppNodeTree';
+import {
+  createAppNodeInstance,
+  instantiateAppNodeTree,
+} from '../tree/instantiateAppNodeTree';
 // eslint-disable-next-line @backstage/no-relative-monorepo-imports
 import { AppIdentityProxy } from '../../../core-app-api/src/apis/implementations/IdentityApi/AppIdentityProxy';
 import { BackstageRouteObject } from '../routing/types';
@@ -527,7 +533,6 @@ export function prepareSpecializedApp(
     string,
     { node: AppNode; apiRefId: string }
   >();
-  let treeInstancesNeedReset = false;
 
   if (providedApis) {
     registerFeatureFlagDeclarationsInHolder(providedApis, features);
@@ -547,11 +552,6 @@ export function prepareSpecializedApp(
     for (const entry of bootstrapApiFactoryEntries) {
       bootstrapApiRefIds.add(entry.factory.api.id);
     }
-    treeInstancesNeedReset = true;
-  }
-
-  if (treeInstancesNeedReset) {
-    clearTreeInstances(tree);
   }
   const phase = createPhaseApis({
     tree,
@@ -1335,13 +1335,6 @@ function prepareBootstrapErrorBoundary(options: {
   );
 }
 
-function clearTreeInstances(tree: AppTree) {
-  const nodes = new Set<AppNode>([...tree.nodes.values(), ...tree.orphans]);
-  for (const node of nodes) {
-    clearNodeInstance(node);
-  }
-}
-
 function clearFinalizationBoundaryInstances(tree: AppTree) {
   clearNodeInstance(tree.root);
 
@@ -1460,6 +1453,69 @@ const EMPTY_API_HOLDER: ApiHolder = {
   },
 };
 
+function instantiateDetachedAppNodeTree(options: {
+  rootNode: AppNode;
+  apis: ApiHolder;
+  collector: ErrorCollector;
+  extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
+  onMissingApi?(ctx: { node: AppNode; apiRefId: string }): void;
+  predicateContext?: ExtensionPredicateContext;
+}): AppNode | undefined {
+  const detachedNodes = new WeakMap<AppNode, AppNode | null>();
+
+  function instantiateNode(node: AppNode): AppNode | undefined {
+    if (detachedNodes.has(node)) {
+      return detachedNodes.get(node) ?? undefined;
+    }
+    if (node.spec.disabled) {
+      detachedNodes.set(node, null);
+      return undefined;
+    }
+    if (
+      options.predicateContext !== undefined &&
+      node.spec.if !== undefined &&
+      !evaluateFilterPredicate(node.spec.if, options.predicateContext)
+    ) {
+      detachedNodes.set(node, null);
+      return undefined;
+    }
+
+    const instantiatedAttachments = new Map<string, AppNode[]>();
+    for (const [input, children] of node.edges.attachments) {
+      const instantiatedChildren = children.flatMap(child => {
+        const instantiatedChild = instantiateNode(child);
+        return instantiatedChild ? [instantiatedChild] : [];
+      });
+      if (instantiatedChildren.length > 0) {
+        instantiatedAttachments.set(input, instantiatedChildren);
+      }
+    }
+
+    const instance = createAppNodeInstance({
+      node,
+      apis: options.apis,
+      attachments: instantiatedAttachments,
+      collector: options.collector,
+      extensionFactoryMiddleware: options.extensionFactoryMiddleware,
+      onMissingApi: options.onMissingApi,
+    });
+    if (!instance) {
+      detachedNodes.set(node, null);
+      return undefined;
+    }
+
+    const detachedNode: AppNode = {
+      spec: node.spec,
+      edges: node.edges,
+      instance,
+    };
+    detachedNodes.set(node, detachedNode);
+    return detachedNode;
+  }
+
+  return instantiateNode(options.rootNode);
+}
+
 function collectApiFactoryEntries(options: {
   apiNodes: Iterable<AppNode>;
   collector: ErrorCollector;
@@ -1473,20 +1529,18 @@ function collectApiFactoryEntries(options: {
   }
 
   for (const apiNode of options.apiNodes) {
-    if (
-      !instantiateAppNodeTree(
-        apiNode,
-        EMPTY_API_HOLDER,
-        options.collector,
-        undefined,
-        options.predicateContext
-          ? { predicateContext: options.predicateContext }
-          : undefined,
-      )
-    ) {
+    const detachedApiNode = instantiateDetachedAppNodeTree({
+      rootNode: apiNode,
+      apis: EMPTY_API_HOLDER,
+      collector: options.collector,
+      predicateContext: options.predicateContext,
+    });
+    if (!detachedApiNode) {
       continue;
     }
-    const apiFactory = apiNode.instance?.getData(ApiBlueprint.dataRefs.factory);
+    const apiFactory = detachedApiNode.instance?.getData(
+      ApiBlueprint.dataRefs.factory,
+    );
     if (apiFactory) {
       const apiRefId = apiFactory.api.id;
       const ownerId = getApiOwnerId(apiRefId);

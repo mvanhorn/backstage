@@ -1004,6 +1004,75 @@ describe('createSpecializedApp', () => {
       ).resolves.toBeInTheDocument();
     });
 
+    it('should defer conditional api roots without resetting visible api instances', () => {
+      const featureFlagsApi = {
+        isActive: jest.fn((name: string) => name === 'test-flag'),
+        registerFlag: jest.fn(),
+        getRegisteredFlags: () => [],
+        save: jest.fn(),
+      } as unknown as typeof featureFlagsApiRef.T;
+      const visibleApiExtension = ApiBlueprint.make({
+        name: 'visible-api',
+        params: defineParams =>
+          defineParams({
+            api: createApiRef<{ value: string }>({ id: 'test.visible-api' }),
+            deps: {},
+            factory: () => ({ value: 'visible' }),
+          }),
+      });
+      const deferredApiExtension = ApiBlueprint.make({
+        name: 'deferred-api',
+        params: defineParams =>
+          defineParams({
+            api: createApiRef<{ value: string }>({ id: 'test.deferred-api' }),
+            deps: {},
+            factory: () => ({ value: 'deferred' }),
+          }),
+      }).override({
+        if: { featureFlags: { $contains: 'test-flag' } },
+      });
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          makeAppPlugin(),
+          createFrontendPlugin({
+            pluginId: 'test',
+            featureFlags: [{ name: 'test-flag' }],
+            extensions: [
+              visibleApiExtension,
+              deferredApiExtension,
+              ApiBlueprint.make({
+                name: 'feature-flags',
+                params: defineParams =>
+                  defineParams({
+                    api: featureFlagsApiRef,
+                    deps: {},
+                    factory: () => featureFlagsApi,
+                  }),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const bootstrapTree = preparedApp.getBootstrapApp().tree;
+      const apiNodes = bootstrapTree.root.edges.attachments.get('apis') ?? [];
+      const visibleApiNode = apiNodes.find(
+        node => node.spec.id === 'api:test/visible-api',
+      );
+      const deferredApiNode = apiNodes.find(
+        node => node.spec.id === 'api:test/deferred-api',
+      );
+
+      expect(visibleApiNode?.instance).toBeDefined();
+      expect(deferredApiNode?.instance).toBeUndefined();
+
+      const visibleApiInstance = visibleApiNode?.instance;
+      preparedApp.finalize();
+
+      expect(visibleApiNode?.instance).toBe(visibleApiInstance);
+      expect(deferredApiNode?.instance).toBeDefined();
+    });
+
     it('should defer app root children until finalize', async () => {
       const identityApi = {
         getProfileInfo: async () => ({ displayName: 'Test User' }),

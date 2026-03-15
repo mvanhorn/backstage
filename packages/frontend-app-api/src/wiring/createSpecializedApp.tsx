@@ -524,8 +524,7 @@ export function prepareSpecializedApp(
   const internalStaticFactories =
     internalOptions?.__internal?.apiFactoryOverrides ?? [];
   const phaseStaticFactories = [...internalStaticFactories];
-  const bootstrapApiFactoryEntries: ApiFactoryEntry[] = [];
-  const bootstrapApiRefIds = new Set<string>();
+  const bootstrapApiFactoryEntries = new Map<string, ApiFactoryEntry>();
   const bootstrapMissingApiAccesses = new Map<
     string,
     { node: AppNode; apiRefId: string }
@@ -534,21 +533,18 @@ export function prepareSpecializedApp(
   if (providedApis) {
     registerFeatureFlagDeclarationsInHolder(providedApis, features);
   } else {
-    bootstrapApiFactoryEntries.push(
-      ...collectApiFactoryEntries({
-        apiNodes: (tree.root.edges.attachments.get('apis') ?? []).filter(
-          apiNode => !bootstrapClassification.deferredApiRoots.has(apiNode),
-        ),
-        collector,
-      }),
-    );
-    const apiFactories = bootstrapApiFactoryEntries.map(entry =>
-      wrapFeatureFlagApiFactory(entry.factory, features),
+    collectApiFactoryEntries({
+      apiNodes: (tree.root.edges.attachments.get('apis') ?? []).filter(
+        apiNode => !bootstrapClassification.deferredApiRoots.has(apiNode),
+      ),
+      collector,
+      entries: bootstrapApiFactoryEntries,
+    });
+    const apiFactories = Array.from(
+      bootstrapApiFactoryEntries.values(),
+      entry => wrapFeatureFlagApiFactory(entry.factory, features),
     );
     appApiRegistry.registerAll(apiFactories);
-    for (const entry of bootstrapApiFactoryEntries) {
-      bootstrapApiRefIds.add(entry.factory.api.id);
-    }
   }
   const phase = createPhaseApis({
     tree,
@@ -732,7 +728,6 @@ export function prepareSpecializedApp(
         collector,
         features,
         bootstrapApiFactoryEntries,
-        bootstrapApiRefIds,
         bootstrapMissingApiAccesses,
         predicateContext: sessionStateData.predicateContext,
       });
@@ -1454,14 +1449,9 @@ function collectApiFactoryEntries(options: {
   apiNodes: Iterable<AppNode>;
   collector: ErrorCollector;
   predicateContext?: ExtensionPredicateContext;
-  existingEntries?: Iterable<ApiFactoryEntry>;
-}): ApiFactoryEntry[] {
-  const factoriesById = new Map<string, ApiFactoryEntry>();
-
-  for (const entry of options.existingEntries ?? []) {
-    factoriesById.set(entry.factory.api.id, entry);
-  }
-
+  entries?: Map<string, ApiFactoryEntry>;
+}): Map<string, ApiFactoryEntry> {
+  const factoriesById = options.entries ?? new Map<string, ApiFactoryEntry>();
   for (const apiNode of options.apiNodes) {
     const detachedApiNode = instantiateAppNodeSubtree({
       rootNode: apiNode,
@@ -1533,11 +1523,7 @@ function collectApiFactoryEntries(options: {
     }
   }
 
-  return Array.from(factoriesById.values(), entry => ({
-    pluginId: entry.pluginId,
-    node: entry.node,
-    factory: entry.factory,
-  }));
+  return factoriesById;
 }
 
 function syncFinalApiFactories(options: {
@@ -1546,8 +1532,7 @@ function syncFinalApiFactories(options: {
   apiResolver: FrontendApiResolver;
   collector: ErrorCollector;
   features: FrontendFeature[];
-  bootstrapApiFactoryEntries: ApiFactoryEntry[];
-  bootstrapApiRefIds: Set<string>;
+  bootstrapApiFactoryEntries: ReadonlyMap<string, ApiFactoryEntry>;
   bootstrapMissingApiAccesses: Map<string, { node: AppNode; apiRefId: string }>;
   predicateContext: ExtensionPredicateContext;
 }) {
@@ -1555,11 +1540,11 @@ function syncFinalApiFactories(options: {
     apiNodes: options.deferredApiNodes,
     collector: options.collector,
     predicateContext: options.predicateContext,
-    existingEntries: options.bootstrapApiFactoryEntries,
+    entries: new Map(options.bootstrapApiFactoryEntries),
   });
-  const changedEntries = finalApiEntries.filter(entry => {
-    const bootstrapEntry = options.bootstrapApiFactoryEntries.find(
-      candidate => candidate.factory.api.id === entry.factory.api.id,
+  const changedEntries = Array.from(finalApiEntries.values()).filter(entry => {
+    const bootstrapEntry = options.bootstrapApiFactoryEntries.get(
+      entry.factory.api.id,
     );
     if (!bootstrapEntry) {
       return true;
@@ -1593,14 +1578,10 @@ function syncFinalApiFactories(options: {
   options.apiResolver.invalidate(
     changedFactories.map(factory => factory.api.id),
   );
-
-  const finalApiRefIds = new Set(
-    finalApiEntries.map(apiEntry => apiEntry.factory.api.id),
-  );
   for (const bootstrapAccess of options.bootstrapMissingApiAccesses.values()) {
     if (
-      options.bootstrapApiRefIds.has(bootstrapAccess.apiRefId) ||
-      !finalApiRefIds.has(bootstrapAccess.apiRefId)
+      options.bootstrapApiFactoryEntries.has(bootstrapAccess.apiRefId) ||
+      !finalApiEntries.has(bootstrapAccess.apiRefId)
     ) {
       continue;
     }

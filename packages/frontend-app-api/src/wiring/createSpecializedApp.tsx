@@ -48,10 +48,7 @@ import type {
   EvaluatePermissionRequest,
   EvaluatePermissionResponse,
 } from '@backstage/plugin-permission-common';
-import {
-  evaluateFilterPredicate,
-  FilterPredicate,
-} from '@backstage/filter-predicates';
+import { FilterPredicate } from '@backstage/filter-predicates';
 import {
   createExtensionDataContainer,
   OpaqueFrontendPlugin,
@@ -85,7 +82,7 @@ import { resolveAppTree } from '../tree/resolveAppTree';
 import { resolveAppNodeSpecs } from '../tree/resolveAppNodeSpecs';
 import { readAppExtensionsConfig } from '../tree/readAppExtensionsConfig';
 import {
-  createAppNodeInstance,
+  instantiateAppNodeSubtree,
   instantiateAppNodeTree,
 } from '../tree/instantiateAppNodeTree';
 // eslint-disable-next-line @backstage/no-relative-monorepo-imports
@@ -1453,69 +1450,6 @@ const EMPTY_API_HOLDER: ApiHolder = {
   },
 };
 
-function instantiateDetachedAppNodeTree(options: {
-  rootNode: AppNode;
-  apis: ApiHolder;
-  collector: ErrorCollector;
-  extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
-  onMissingApi?(ctx: { node: AppNode; apiRefId: string }): void;
-  predicateContext?: ExtensionPredicateContext;
-}): AppNode | undefined {
-  const detachedNodes = new WeakMap<AppNode, AppNode | null>();
-
-  function instantiateNode(node: AppNode): AppNode | undefined {
-    if (detachedNodes.has(node)) {
-      return detachedNodes.get(node) ?? undefined;
-    }
-    if (node.spec.disabled) {
-      detachedNodes.set(node, null);
-      return undefined;
-    }
-    if (
-      options.predicateContext !== undefined &&
-      node.spec.if !== undefined &&
-      !evaluateFilterPredicate(node.spec.if, options.predicateContext)
-    ) {
-      detachedNodes.set(node, null);
-      return undefined;
-    }
-
-    const instantiatedAttachments = new Map<string, AppNode[]>();
-    for (const [input, children] of node.edges.attachments) {
-      const instantiatedChildren = children.flatMap(child => {
-        const instantiatedChild = instantiateNode(child);
-        return instantiatedChild ? [instantiatedChild] : [];
-      });
-      if (instantiatedChildren.length > 0) {
-        instantiatedAttachments.set(input, instantiatedChildren);
-      }
-    }
-
-    const instance = createAppNodeInstance({
-      node,
-      apis: options.apis,
-      attachments: instantiatedAttachments,
-      collector: options.collector,
-      extensionFactoryMiddleware: options.extensionFactoryMiddleware,
-      onMissingApi: options.onMissingApi,
-    });
-    if (!instance) {
-      detachedNodes.set(node, null);
-      return undefined;
-    }
-
-    const detachedNode: AppNode = {
-      spec: node.spec,
-      edges: node.edges,
-      instance,
-    };
-    detachedNodes.set(node, detachedNode);
-    return detachedNode;
-  }
-
-  return instantiateNode(options.rootNode);
-}
-
 function collectApiFactoryEntries(options: {
   apiNodes: Iterable<AppNode>;
   collector: ErrorCollector;
@@ -1529,11 +1463,13 @@ function collectApiFactoryEntries(options: {
   }
 
   for (const apiNode of options.apiNodes) {
-    const detachedApiNode = instantiateDetachedAppNodeTree({
+    const detachedApiNode = instantiateAppNodeSubtree({
       rootNode: apiNode,
       apis: EMPTY_API_HOLDER,
       collector: options.collector,
       predicateContext: options.predicateContext,
+      writeNodeInstances: false,
+      reuseExistingInstances: false,
     });
     if (!detachedApiNode) {
       continue;

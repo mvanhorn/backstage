@@ -64,6 +64,19 @@ type Mutable<T> = {
   -readonly [P in keyof T]: T[P];
 };
 
+type InstantiateAppNodeSubtreeOptions = {
+  rootNode: AppNode;
+  apis: ApiHolder;
+  collector: ErrorCollector;
+  extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
+  stopAtAttachment?(ctx: { node: AppNode; input: string }): boolean;
+  skipChild?(ctx: { node: AppNode; input: string; child: AppNode }): boolean;
+  onMissingApi?(ctx: { node: AppNode; apiRefId: string }): void;
+  predicateContext?: Record<string, unknown>;
+  reuseExistingInstances?: boolean;
+  writeNodeInstances?: boolean;
+};
+
 function resolveV1InputDataMap(
   dataMap: {
     [name in string]: ExtensionDataRef;
@@ -517,6 +530,87 @@ export function createAppNodeInstance(options: {
 }
 
 /**
+ * Starting at the provided node, instantiate a subtree without necessarily
+ * mutating the original app tree.
+ *
+ * @internal
+ */
+export function instantiateAppNodeSubtree(
+  options: InstantiateAppNodeSubtreeOptions,
+): AppNode | undefined {
+  const instantiatedNodes = new WeakMap<AppNode, AppNode | null>();
+
+  function createInstance(node: AppNode): AppNode | undefined {
+    if (instantiatedNodes.has(node)) {
+      return instantiatedNodes.get(node) ?? undefined;
+    }
+    if (options.reuseExistingInstances !== false && node.instance) {
+      instantiatedNodes.set(node, node);
+      return node;
+    }
+    if (node.spec.disabled) {
+      instantiatedNodes.set(node, null);
+      return undefined;
+    }
+    if (
+      options.predicateContext !== undefined &&
+      node.spec.if !== undefined &&
+      !evaluateFilterPredicate(node.spec.if, options.predicateContext)
+    ) {
+      instantiatedNodes.set(node, null);
+      return undefined;
+    }
+
+    const instantiatedAttachments = new Map<string, AppNode[]>();
+
+    for (const [input, children] of node.edges.attachments) {
+      if (options.stopAtAttachment?.({ node, input })) {
+        continue;
+      }
+      const instantiatedChildren = children.flatMap(child => {
+        if (options.skipChild?.({ node, input, child })) {
+          return [];
+        }
+        const childNode = createInstance(child);
+        return childNode ? [childNode] : [];
+      });
+      if (instantiatedChildren.length > 0) {
+        instantiatedAttachments.set(input, instantiatedChildren);
+      }
+    }
+
+    const instance = createAppNodeInstance({
+      extensionFactoryMiddleware: options.extensionFactoryMiddleware,
+      node,
+      apis: options.apis,
+      attachments: instantiatedAttachments,
+      collector: options.collector,
+      onMissingApi: options.onMissingApi,
+    });
+    if (!instance) {
+      instantiatedNodes.set(node, null);
+      return undefined;
+    }
+
+    if (options.writeNodeInstances === false) {
+      const detachedNode: AppNode = {
+        spec: node.spec,
+        edges: node.edges,
+        instance,
+      };
+      instantiatedNodes.set(node, detachedNode);
+      return detachedNode;
+    }
+
+    (node as Mutable<AppNode>).instance = instance;
+    instantiatedNodes.set(node, node);
+    return node;
+  }
+
+  return createInstance(options.rootNode);
+}
+
+/**
  * Starting at the provided node, instantiate all reachable nodes in the tree that have not been disabled.
  * @internal
  */
@@ -554,53 +648,16 @@ export function instantiateAppNodeTree(
           predicateContext: optionsOrPredicateContext,
         };
 
-  function createInstance(node: AppNode): AppNodeInstance | undefined {
-    if (node.instance) {
-      return node.instance;
-    }
-    if (node.spec.disabled) {
-      return undefined;
-    }
-    if (
-      options?.predicateContext !== undefined &&
-      node.spec.if !== undefined &&
-      !evaluateFilterPredicate(node.spec.if, options.predicateContext)
-    ) {
-      return undefined;
-    }
-
-    const instantiatedAttachments = new Map<string, AppNode[]>();
-
-    for (const [input, children] of node.edges.attachments) {
-      if (options?.stopAtAttachment?.({ node, input })) {
-        continue;
-      }
-      const instantiatedChildren = children.flatMap(child => {
-        if (options?.skipChild?.({ node, input, child })) {
-          return [];
-        }
-        const childInstance = createInstance(child);
-        if (!childInstance) {
-          return [];
-        }
-        return [child];
-      });
-      if (instantiatedChildren.length > 0) {
-        instantiatedAttachments.set(input, instantiatedChildren);
-      }
-    }
-
-    (node as Mutable<AppNode>).instance = createAppNodeInstance({
-      extensionFactoryMiddleware,
-      node,
+  return (
+    instantiateAppNodeSubtree({
+      rootNode,
       apis,
-      attachments: instantiatedAttachments,
       collector,
-      onMissingApi: options?.onMissingApi,
-    });
-
-    return node.instance;
-  }
-
-  return createInstance(rootNode) !== undefined;
+      extensionFactoryMiddleware,
+      stopAtAttachment: options.stopAtAttachment,
+      skipChild: options.skipChild,
+      onMissingApi: options.onMissingApi,
+      predicateContext: options.predicateContext,
+    }) !== undefined
+  );
 }

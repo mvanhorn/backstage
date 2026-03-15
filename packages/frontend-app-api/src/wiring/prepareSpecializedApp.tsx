@@ -20,19 +20,8 @@ import {
   AnyApiFactory,
   ApiHolder,
   AppTree,
-  AppTreeApi,
-  appTreeApiRef,
   ConfigApi,
-  configApiRef,
   coreExtensionData,
-  RouteRef,
-  ExternalRouteRef,
-  SubRouteRef,
-  AnyRouteRefParams,
-  RouteFunc,
-  RouteResolutionApi,
-  createApiFactory,
-  routeResolutionApiRef,
   AppNode,
   AppNodeInstance,
   ExtensionDataRef,
@@ -57,13 +46,7 @@ import {
   toInternalExtension,
 } from '../../../frontend-plugin-api/src/wiring/resolveExtensionDefinition';
 
-import {
-  extractRouteInfoFromAppNode,
-  RouteInfo,
-} from '../routing/extractRouteInfoFromAppNode';
-
 import { CreateAppRouteBinder } from '../routing';
-import { RouteResolver } from '../routing/RouteResolver';
 import { resolveRouteBindings } from '../routing/resolveRouteBindings';
 import { collectRouteIds } from '../routing/collectRouteIds';
 // eslint-disable-next-line @backstage/no-relative-monorepo-imports
@@ -76,24 +59,23 @@ import { Root } from '../extensions/Root';
 import { resolveAppTree } from '../tree/resolveAppTree';
 import { resolveAppNodeSpecs } from '../tree/resolveAppNodeSpecs';
 import { readAppExtensionsConfig } from '../tree/readAppExtensionsConfig';
-import {
-  instantiateAppNodeSubtree,
-  instantiateAppNodeTree,
-} from '../tree/instantiateAppNodeTree';
-// eslint-disable-next-line @backstage/no-relative-monorepo-imports
-import { AppIdentityProxy } from '../../../core-app-api/src/apis/implementations/IdentityApi/AppIdentityProxy';
-import { BackstageRouteObject } from '../routing/types';
-import { matchRoutes } from 'react-router-dom';
+import { instantiateAppNodeSubtree } from '../tree/instantiateAppNodeTree';
 import {
   createPluginInfoAttacher,
   FrontendPluginInfoResolver,
 } from './createPluginInfoAttacher';
-import { createRouteAliasResolver } from '../routing/RouteAliasResolver';
 import {
   AppError,
   createErrorCollector,
   ErrorCollector,
 } from './createErrorCollector';
+import {
+  AppTreeApiProxy,
+  createPhaseApis,
+  instantiateAndInitializePhaseTree,
+  RouteResolutionApiProxy,
+  setIdentityApiTarget,
+} from './phaseApis';
 import {
   collectPredicateReferences,
   createPredicateContextLoader,
@@ -196,163 +178,6 @@ const OpaqueSpecializedAppSessionState = OpaqueType.create<{
 const signInPageComponentDataRef = createExtensionDataRef<
   ComponentType<SignInPageProps>
 >().with({ id: 'core.sign-in-page.component' });
-
-// Helps delay callers from reaching out to the API before the app tree has been materialized
-class AppTreeApiProxy implements AppTreeApi {
-  #routeInfo?: RouteInfo;
-  private readonly tree: AppTree;
-  private readonly appBasePath: string;
-
-  constructor(tree: AppTree, appBasePath: string) {
-    this.tree = tree;
-    this.appBasePath = appBasePath;
-  }
-
-  private checkIfInitialized() {
-    if (!this.#routeInfo) {
-      throw new Error(
-        `You can't access the AppTreeApi during initialization of the app tree. Please move occurrences of this out of the initialization of the factory`,
-      );
-    }
-  }
-
-  getTree() {
-    this.checkIfInitialized();
-
-    return { tree: this.tree };
-  }
-
-  getNodesByRoutePath(routePath: string): { nodes: AppNode[] } {
-    this.checkIfInitialized();
-    const routeInfo = this.#routeInfo;
-    if (!routeInfo) {
-      throw new Error(
-        `You can't access the AppTreeApi during initialization of the app tree. Please move occurrences of this out of the initialization of the factory`,
-      );
-    }
-
-    let path = routePath;
-    if (path.startsWith(this.appBasePath)) {
-      path = path.slice(this.appBasePath.length);
-    }
-
-    const matchedRoutes = matchRoutes(routeInfo.routeObjects, path);
-
-    const matchedAppNodes =
-      matchedRoutes?.flatMap(routeObj => {
-        const appNode = routeObj.route.appNode;
-        return appNode ? [appNode] : [];
-      }) || [];
-
-    return { nodes: matchedAppNodes };
-  }
-
-  initialize(routeInfo: RouteInfo) {
-    this.#routeInfo = routeInfo;
-  }
-}
-
-// Helps delay callers from reaching out to the API before the app tree has been materialized
-class RouteResolutionApiProxy implements RouteResolutionApi {
-  #delegate: RouteResolutionApi | undefined;
-  #routeObjects: BackstageRouteObject[] | undefined;
-
-  private readonly routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>;
-  private readonly appBasePath: string;
-
-  constructor(
-    routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>,
-    appBasePath: string,
-  ) {
-    this.routeBindings = routeBindings;
-    this.appBasePath = appBasePath;
-  }
-
-  resolve<TParams extends AnyRouteRefParams>(
-    anyRouteRef:
-      | RouteRef<TParams>
-      | SubRouteRef<TParams>
-      | ExternalRouteRef<TParams>,
-    options?: { sourcePath?: string },
-  ): RouteFunc<TParams> | undefined {
-    if (!this.#delegate) {
-      throw new Error(
-        `You can't access the RouteResolver during initialization of the app tree. Please move occurrences of this out of the initialization of the factory`,
-      );
-    }
-
-    return this.#delegate.resolve(anyRouteRef, options);
-  }
-
-  initialize(
-    routeInfo: RouteInfo,
-    routeRefsById: Map<string, RouteRef | SubRouteRef>,
-  ) {
-    this.#delegate = new RouteResolver(
-      routeInfo.routePaths,
-      routeInfo.routeParents,
-      routeInfo.routeObjects,
-      this.routeBindings,
-      this.appBasePath,
-      routeInfo.routeAliasResolver,
-      routeRefsById,
-    );
-    this.#routeObjects = routeInfo.routeObjects;
-
-    return routeInfo;
-  }
-
-  getRouteObjects() {
-    return this.#routeObjects;
-  }
-}
-
-class PreparedAppIdentityProxy extends AppIdentityProxy {
-  #onTargetSet?:
-    | ((
-        identityApi: Parameters<AppIdentityProxy['setTarget']>[0],
-      ) => Promise<void> | void)
-    | undefined;
-  #onTargetError?: ((error: unknown) => void) | undefined;
-
-  setTargetHandlers(options: {
-    onTargetSet?(
-      identityApi: Parameters<AppIdentityProxy['setTarget']>[0],
-    ): Promise<void> | void;
-    onTargetError?(error: unknown): void;
-  }) {
-    this.#onTargetSet = options.onTargetSet;
-    this.#onTargetError = options.onTargetError;
-  }
-
-  clearTargetHandlers() {
-    this.#onTargetSet = undefined;
-    this.#onTargetError = undefined;
-  }
-
-  override setTarget(
-    identityApi: Parameters<AppIdentityProxy['setTarget']>[0],
-    targetOptions: Parameters<AppIdentityProxy['setTarget']>[1],
-  ) {
-    super.setTarget(identityApi, targetOptions);
-
-    const onTargetSet = this.#onTargetSet;
-    if (!onTargetSet) {
-      return;
-    }
-
-    const onTargetError = this.#onTargetError;
-    this.clearTargetHandlers();
-
-    try {
-      void Promise.resolve(onTargetSet(identityApi)).catch(error => {
-        onTargetError?.(error);
-      });
-    } catch (error) {
-      onTargetError?.(error);
-    }
-  }
-}
 
 /**
  * Options for {@link prepareSpecializedApp}.
@@ -1051,95 +876,6 @@ function createBootstrapApp(options: {
   };
 }
 
-function createPhaseApis(options: {
-  tree: AppTree;
-  config: ConfigApi;
-  appApiRegistry: FrontendApiRegistry;
-  fallbackApis?: ApiHolder;
-  includeConfigApi: boolean;
-  appBasePath: string;
-  routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>;
-  staticFactories: AnyApiFactory[];
-}) {
-  const appTreeApi = new AppTreeApiProxy(options.tree, options.appBasePath);
-  const routeResolutionApi = new RouteResolutionApiProxy(
-    options.routeBindings,
-    options.appBasePath,
-  );
-  const identityProxy = new PreparedAppIdentityProxy();
-  const phaseApiRegistry = new FrontendApiRegistry();
-  phaseApiRegistry.registerAll([
-    createApiFactory(appTreeApiRef, appTreeApi),
-    ...(options.includeConfigApi
-      ? [createApiFactory(configApiRef, options.config)]
-      : []),
-    createApiFactory(routeResolutionApiRef, routeResolutionApi),
-    createApiFactory(identityApiRef, identityProxy),
-    ...options.staticFactories,
-  ]);
-
-  const apis = new FrontendApiResolver({
-    primaryRegistry: phaseApiRegistry,
-    secondaryRegistry: options.appApiRegistry,
-    fallbackApis: options.fallbackApis,
-  });
-
-  return {
-    apis,
-    routeResolutionApi,
-    appTreeApi,
-    identityApiProxy: identityProxy,
-  };
-}
-
-function instantiateAndInitializePhaseTree(options: {
-  tree: AppTree;
-  apis: ApiHolder;
-  collector: ErrorCollector;
-  extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
-  routeResolutionApi: RouteResolutionApiProxy;
-  appTreeApi: AppTreeApiProxy;
-  routeRefsById: ReturnType<typeof collectRouteIds>;
-  stopAtSessionBoundary?: boolean;
-  skipChild?(ctx: { node: AppNode; input: string; child: AppNode }): boolean;
-  onMissingApi?(ctx: { node: AppNode; apiRefId: string }): void;
-  predicateContext?: ExtensionPredicateContext;
-}) {
-  instantiateAppNodeTree(
-    options.tree.root,
-    options.apis,
-    options.collector,
-    options.extensionFactoryMiddleware,
-    {
-      ...(options.stopAtSessionBoundary
-        ? {
-            stopAtAttachment: ({
-              node,
-              input,
-            }: {
-              node: AppNode;
-              input: string;
-            }) => isSessionBoundaryAttachment(node, input),
-          }
-        : {}),
-      skipChild: options.skipChild,
-      onMissingApi: options.onMissingApi,
-      predicateContext: options.predicateContext,
-    },
-  );
-
-  const routeInfo = extractRouteInfoFromAppNode(
-    options.tree.root,
-    createRouteAliasResolver(options.routeRefsById),
-  );
-
-  options.routeResolutionApi.initialize(
-    routeInfo,
-    options.routeRefsById.routes,
-  );
-  options.appTreeApi.initialize(routeInfo);
-}
-
 function prepareFinalizedTree(options: { tree: AppTree }) {
   for (const appRootNode of getFinalizationBoundaryNodes(options.tree)) {
     const attachments = appRootNode.edges.attachments as Map<string, AppNode[]>;
@@ -1265,16 +1001,6 @@ function asError(error: unknown): Error {
   }
 
   return new Error(String(error));
-}
-
-function setIdentityApiTarget(options: {
-  identityApiProxy: AppIdentityProxy;
-  identityApi: IdentityApi;
-  signOutTargetUrl: string;
-}) {
-  options.identityApiProxy.setTarget(options.identityApi, {
-    signOutTargetUrl: options.signOutTargetUrl,
-  });
 }
 
 const EMPTY_API_HOLDER: ApiHolder = {

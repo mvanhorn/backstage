@@ -246,9 +246,7 @@ export type PrepareSpecializedAppOptions = {
 export type PreparedSpecializedApp = {
   getBootstrapApp(): BootstrapSpecializedApp;
   onFinalized(callback: (app: FinalizedSpecializedApp) => void): () => void;
-  finalize(options?: {
-    sessionState?: SpecializedAppSessionState;
-  }): FinalizedSpecializedApp;
+  finalize(): FinalizedSpecializedApp;
 };
 
 // Internal options type, not exported in the public API
@@ -591,25 +589,25 @@ export function prepareSpecializedApp(
         subscribed = false;
       };
     },
-    finalize(finalizeOptions?: { sessionState?: SpecializedAppSessionState }) {
+    finalize() {
       finalization.selectMode('finalize');
       if (finalized) {
         return finalized;
       }
-      if (!finalizeOptions?.sessionState) {
+      if (!providedSessionState) {
         // finalize() still depends on bootstrap classification and sign-in
-        // discovery, so we make sure the bootstrap tree has been prepared first.
+        // discovery unless a reusable session was supplied up front, so we make
+        // sure the bootstrap tree has been prepared first.
         getBootstrapApp();
       }
 
       // Direct finalization never waits for async session preparation. Callers
-      // must either supply sessionState or invoke finalize() only when the
-      // predicate context is already available synchronously.
-      const finalizedSessionState =
-        finalizeOptions?.sessionState ??
-        (signInRuntime?.requiresSignIn
-          ? undefined
-          : getSynchronousSessionState());
+      // must either provide sessionState during prepareSpecializedApp() or
+      // invoke finalize() only when the predicate context is already available
+      // synchronously.
+      const finalizedSessionState = signInRuntime?.requiresSignIn
+        ? undefined
+        : getSynchronousSessionState();
       if (!finalizedSessionState) {
         if (signInRuntime?.requiresSignIn) {
           throw new Error(

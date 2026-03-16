@@ -241,9 +241,7 @@ export type FrontendPluginInfoResolver = (ctx: {
 export type PreparedSpecializedApp = {
   getBootstrapApp(): BootstrapSpecializedApp;
   onFinalized(callback: (app: FinalizedSpecializedApp) => void): () => void;
-  finalize(options?: {
-    sessionState?: SpecializedAppSessionState;
-  }): FinalizedSpecializedApp;
+  finalize(): FinalizedSpecializedApp;
 };
 
 // @public

@@ -912,24 +912,6 @@ describe('createSpecializedApp', () => {
       expect(screen.getByText('Prepared')).toBeInTheDocument();
     });
 
-    it('should accept session state through finalize options', () => {
-      const originalApp = createSpecializedApp({
-        features: [makeAppPlugin('Original')],
-      });
-      const preparedApp = prepareSpecializedApp({
-        features: [makeAppPlugin('Prepared')],
-      });
-
-      preparedApp.getBootstrapApp();
-      const app = preparedApp.finalize({
-        sessionState: originalApp.sessionState,
-      });
-
-      render(app.tree.root.instance!.getData(coreExtensionData.reactElement));
-
-      expect(screen.getByText('Prepared')).toBeInTheDocument();
-    });
-
     it('should reject finalize after selecting onFinalized', () => {
       const preparedApp = prepareSpecializedApp({
         features: [makeAppPlugin()],

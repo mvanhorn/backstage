@@ -13,7 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { BackstageCredentials } from '@backstage/backend-plugin-api';
+import {
+  BackstageCredentials,
+  RootConfigService,
+} from '@backstage/backend-plugin-api';
 import { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   ListToolsRequestSchema,
@@ -34,10 +37,16 @@ import { bucketBoundaries, McpServerOperationAttributes } from '../metrics';
 
 export class McpService {
   private readonly actions: ActionsService;
+  private readonly config: RootConfigService;
   private readonly operationDuration: MetricsServiceHistogram<McpServerOperationAttributes>;
 
-  constructor(actions: ActionsService, metrics: MetricsService) {
+  constructor(
+    actions: ActionsService,
+    metrics: MetricsService,
+    config: RootConfigService,
+  ) {
     this.actions = actions;
+    this.config = config;
     this.operationDuration =
       metrics.createHistogram<McpServerOperationAttributes>(
         'mcp.server.operation.duration',
@@ -52,11 +61,13 @@ export class McpService {
   static async create({
     actions,
     metrics,
+    config,
   }: {
     actions: ActionsService;
     metrics: MetricsService;
+    config: RootConfigService;
   }) {
-    return new McpService(actions, metrics);
+    return new McpService(actions, metrics, config);
   }
 
   getServer({ credentials }: { credentials: BackstageCredentials }) {
@@ -74,25 +85,28 @@ export class McpService {
       let errorType: string | undefined;
 
       try {
-        // TODO: switch this to be configuration based later
         const { actions } = await this.actions.list({ credentials });
+        const overrides = this.getOverrides();
 
         return {
-          tools: actions.map(action => ({
-            inputSchema: action.schema.input,
-            // todo(blam): this is unfortunately not supported by most clients yet.
-            // When this is provided you need to provide structuredContent instead.
-            // outputSchema: action.schema.output,
-            name: action.name,
-            description: action.description,
-            annotations: {
-              title: action.title,
-              destructiveHint: action.attributes.destructive,
-              idempotentHint: action.attributes.idempotent,
-              readOnlyHint: action.attributes.readOnly,
-              openWorldHint: false,
-            },
-          })),
+          tools: actions.map(action => {
+            const override = overrides.get(action.id);
+            return {
+              inputSchema: action.schema.input,
+              // todo(blam): this is unfortunately not supported by most clients yet.
+              // When this is provided you need to provide structuredContent instead.
+              // outputSchema: action.schema.output,
+              name: override?.name ?? action.name,
+              description: override?.description ?? action.description,
+              annotations: {
+                title: override?.title ?? action.title,
+                destructiveHint: action.attributes.destructive,
+                idempotentHint: action.attributes.idempotent,
+                readOnlyHint: action.attributes.readOnly,
+                openWorldHint: false,
+              },
+            };
+          }),
         };
       } catch (err) {
         errorType = err instanceof Error ? err.name : 'Error';
@@ -115,7 +129,8 @@ export class McpService {
       try {
         const result = await handleErrors(async () => {
           const { actions } = await this.actions.list({ credentials });
-          const action = actions.find(a => a.name === params.name);
+          const overrides = this.getOverrides();
+          const action = this.findAction(actions, overrides, params.name);
 
           if (!action) {
             throw new NotFoundError(`Action "${params.name}" not found`);
@@ -168,5 +183,51 @@ export class McpService {
     });
 
     return server;
+  }
+
+  private getOverrides(): Map<
+    string,
+    { name?: string; description?: string; title?: string }
+  > {
+    const overridesConfig = this.config.getOptionalConfig(
+      'mcpActions.overrides',
+    );
+
+    if (!overridesConfig) {
+      return new Map();
+    }
+
+    const result = new Map<
+      string,
+      { name?: string; description?: string; title?: string }
+    >();
+
+    for (const actionId of overridesConfig.keys()) {
+      const actionConfig = overridesConfig.getConfig(actionId);
+      result.set(actionId, {
+        name: actionConfig.getOptionalString('name'),
+        description: actionConfig.getOptionalString('description'),
+        title: actionConfig.getOptionalString('title'),
+      });
+    }
+
+    return result;
+  }
+
+  private findAction(
+    actions: { id: string; name: string }[],
+    overrides: Map<string, { name?: string }>,
+    toolName: string,
+  ) {
+    // First check if any action has an overridden name matching the tool name
+    for (const action of actions) {
+      const override = overrides.get(action.id);
+      if (override?.name === toolName) {
+        return action;
+      }
+    }
+
+    // Fall back to matching by original action name
+    return actions.find(a => a.name === toolName);
   }
 }

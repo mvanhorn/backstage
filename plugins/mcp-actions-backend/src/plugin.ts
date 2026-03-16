@@ -62,6 +62,7 @@ export const mcpPlugin = createBackendPlugin({
         const mcpService = await McpService.create({
           actions,
           metrics,
+          config,
         });
 
         const sseRouter = createSseRouter({

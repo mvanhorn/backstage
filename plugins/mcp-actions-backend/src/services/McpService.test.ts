@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { mockCredentials } from '@backstage/backend-test-utils';
+import { mockCredentials, mockServices } from '@backstage/backend-test-utils';
 import { McpService } from './McpService';
 import {
   actionsRegistryServiceMock,
@@ -45,6 +45,7 @@ describe('McpService', () => {
     const mcpService = await McpService.create({
       actions: mockActionsRegistry,
       metrics: mockMetrics,
+      config: mockServices.rootConfig(),
     });
 
     const server = mcpService.getServer({
@@ -117,6 +118,7 @@ describe('McpService', () => {
     const mcpService = await McpService.create({
       actions: mockActionsRegistry,
       metrics: mockMetrics,
+      config: mockServices.rootConfig(),
     });
 
     const server = mcpService.getServer({
@@ -170,6 +172,7 @@ describe('McpService', () => {
     const mcpService = await McpService.create({
       actions: mockActionsRegistry,
       metrics: mockMetrics,
+      config: mockServices.rootConfig(),
     });
 
     const server = mcpService.getServer({
@@ -234,6 +237,7 @@ describe('McpService', () => {
     const mcpService = await McpService.create({
       actions: actionsRegistryServiceMock(),
       metrics: mockMetrics,
+      config: mockServices.rootConfig(),
     });
 
     const server = mcpService.getServer({
@@ -302,6 +306,7 @@ describe('McpService', () => {
     const mcpService = await McpService.create({
       actions: mockActionsRegistry,
       metrics: mockMetrics,
+      config: mockServices.rootConfig(),
     });
 
     const server = mcpService.getServer({
@@ -342,5 +347,141 @@ describe('McpService', () => {
         'error.type': 'CustomError',
       }),
     );
+  });
+
+  it('should apply config overrides to tool name, description, and title', async () => {
+    const mockActionsRegistry = actionsRegistryServiceMock();
+    mockActionsRegistry.register({
+      name: 'mock-action',
+      title: 'Original Title',
+      description: 'Original description',
+      schema: {
+        input: z => z.object({ input: z.string() }),
+        output: z => z.object({ output: z.string() }),
+      },
+      action: async () => ({ output: { output: 'test' } }),
+    });
+
+    const mockMetrics = metricsServiceMock.mock();
+    const mcpService = await McpService.create({
+      actions: mockActionsRegistry,
+      metrics: mockMetrics,
+      config: mockServices.rootConfig({
+        data: {
+          mcpActions: {
+            overrides: {
+              'test:mock-action': {
+                name: 'better-name',
+                description: 'Better description',
+                title: 'Better Title',
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    const server = mcpService.getServer({
+      credentials: mockCredentials.user(),
+    });
+
+    const client = new Client({
+      name: 'test client',
+      version: '1.0',
+    });
+
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+
+    await Promise.all([
+      client.connect(clientTransport),
+      server.connect(serverTransport),
+    ]);
+
+    const result = await client.request(
+      { method: 'tools/list' },
+      ListToolsResultSchema,
+    );
+
+    expect(result.tools).toEqual([
+      expect.objectContaining({
+        name: 'better-name',
+        description: 'Better description',
+        annotations: expect.objectContaining({
+          title: 'Better Title',
+        }),
+      }),
+    ]);
+  });
+
+  it('should resolve overridden tool name when calling a tool', async () => {
+    const mockActionsRegistry = actionsRegistryServiceMock();
+    const mockAction = jest.fn(async () => ({ output: { output: 'test' } }));
+
+    mockActionsRegistry.register({
+      name: 'mock-action',
+      title: 'Test',
+      description: 'Test',
+      schema: {
+        input: z => z.object({ input: z.string() }),
+        output: z => z.object({ output: z.string() }),
+      },
+      action: mockAction,
+    });
+
+    const mockMetrics = metricsServiceMock.mock();
+    const mcpService = await McpService.create({
+      actions: mockActionsRegistry,
+      metrics: mockMetrics,
+      config: mockServices.rootConfig({
+        data: {
+          mcpActions: {
+            overrides: {
+              'test:mock-action': {
+                name: 'renamed-action',
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    const server = mcpService.getServer({
+      credentials: mockCredentials.user(),
+    });
+
+    const client = new Client({
+      name: 'test client',
+      version: '1.0',
+    });
+
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+
+    await Promise.all([
+      client.connect(clientTransport),
+      server.connect(serverTransport),
+    ]);
+
+    const result = await client.request(
+      {
+        method: 'tools/call',
+        params: { name: 'renamed-action', arguments: { input: 'test' } },
+      },
+      CallToolResultSchema,
+    );
+
+    expect(mockAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: { input: 'test' },
+      }),
+    );
+
+    expect(result.content).toEqual([
+      {
+        type: 'text',
+        text: ['```json', JSON.stringify({ output: 'test' }, null, 2), '```'].join('\n'),
+      },
+    ]);
   });
 });

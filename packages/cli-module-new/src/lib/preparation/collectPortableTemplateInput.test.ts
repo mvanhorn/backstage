@@ -214,6 +214,56 @@ describe('collectTemplateParams', () => {
         packagePath: 'plugins/custom-backend-module-my-extension',
       });
     });
+
+    it('should re-prompt when pluginPackage is prefilled with an empty string', async () => {
+      jest.spyOn(inquirer, 'prompt').mockResolvedValueOnce({
+        pluginPackage: '@mycompany/plugin-custom-backend',
+      });
+
+      await expect(
+        collectPortableTemplateInput({
+          ...backendModuleOptions,
+          prefilledParams: {
+            pluginId: 'custom',
+            moduleId: 'my-extension',
+            pluginPackage: '',
+          },
+        }),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          roleParams: expect.objectContaining({
+            pluginPackage: '@mycompany/plugin-custom-backend',
+          }),
+        }),
+      );
+
+      expect(inquirer.prompt).toHaveBeenCalled();
+    });
+
+    it('should re-prompt when pluginPackage is prefilled with an invalid name', async () => {
+      jest.spyOn(inquirer, 'prompt').mockResolvedValueOnce({
+        pluginPackage: '@mycompany/plugin-custom-backend',
+      });
+
+      await expect(
+        collectPortableTemplateInput({
+          ...backendModuleOptions,
+          prefilledParams: {
+            pluginId: 'custom',
+            moduleId: 'my-extension',
+            pluginPackage: 'INVALID PACKAGE NAME!',
+          },
+        }),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          roleParams: expect.objectContaining({
+            pluginPackage: '@mycompany/plugin-custom-backend',
+          }),
+        }),
+      );
+
+      expect(inquirer.prompt).toHaveBeenCalled();
+    });
   });
 
   describe('frontend-plugin-module with pluginPackage', () => {

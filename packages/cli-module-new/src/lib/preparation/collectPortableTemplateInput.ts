@@ -65,20 +65,28 @@ export async function collectPortableTemplateInput(
     ...deprecatedParams,
   };
 
-  // Pre-populate pluginPackage for known plugins so the prompt is skipped
+  // Pre-populate pluginPackage for known plugins so the prompt is skipped.
+  // Also clear out empty/invalid values so they don't bypass the prompt.
   if (
-    (template.role === 'backend-plugin-module' ||
-      template.role === 'frontend-plugin-module') &&
-    parameters.pluginId &&
-    !parameters.pluginPackage
+    template.role === 'backend-plugin-module' ||
+    template.role === 'frontend-plugin-module'
   ) {
-    const knownPackages =
-      template.role === 'backend-plugin-module'
-        ? knownBackendPluginPackageNameByPluginId
-        : knownFrontendPluginPackageNameByPluginId;
-    const knownPackage = knownPackages[parameters.pluginId as string];
-    if (knownPackage) {
-      parameters.pluginPackage = knownPackage;
+    if (
+      parameters.pluginPackage &&
+      !isValidNpmPackageName(parameters.pluginPackage as string)
+    ) {
+      delete parameters.pluginPackage;
+    }
+
+    if (parameters.pluginId && !parameters.pluginPackage) {
+      const knownPackages =
+        template.role === 'backend-plugin-module'
+          ? knownBackendPluginPackageNameByPluginId
+          : knownFrontendPluginPackageNameByPluginId;
+      const knownPackage = knownPackages[parameters.pluginId as string];
+      if (knownPackage) {
+        parameters.pluginPackage = knownPackage;
+      }
     }
   }
 

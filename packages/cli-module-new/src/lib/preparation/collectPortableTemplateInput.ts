@@ -59,11 +59,28 @@ export async function collectPortableTemplateInput(
     deprecatedParams.pluginId = prefilledParams.id;
   }
 
-  const parameters = {
+  const parameters: PortableTemplateParams = {
     ...template.values,
     ...prefilledParams,
     ...deprecatedParams,
   };
+
+  // Pre-populate pluginPackage for known plugins so the prompt is skipped
+  if (
+    (template.role === 'backend-plugin-module' ||
+      template.role === 'frontend-plugin-module') &&
+    parameters.pluginId &&
+    !parameters.pluginPackage
+  ) {
+    const knownPackages =
+      template.role === 'backend-plugin-module'
+        ? knownBackendPluginPackageNameByPluginId
+        : knownFrontendPluginPackageNameByPluginId;
+    const knownPackage = knownPackages[parameters.pluginId as string];
+    if (knownPackage) {
+      parameters.pluginPackage = knownPackage;
+    }
+  }
 
   const needsAnswer = [];
   const prefilledAnswers = {} as PortableTemplateParams;

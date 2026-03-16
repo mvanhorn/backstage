@@ -34,8 +34,7 @@ export type { CreateSpecializedAppInternalOptions };
 /**
  * Options for {@link createSpecializedApp}.
  *
- * @deprecated Use {@link import('./prepareSpecializedApp').PrepareSpecializedAppOptions} with
- * {@link import('./prepareSpecializedApp').prepareSpecializedApp} instead.
+ * @deprecated Use `PrepareSpecializedAppOptions` with `prepareSpecializedApp` instead.
  *
  * @public
  */
@@ -92,7 +91,7 @@ export type CreateSpecializedAppOptions = {
  * intended for use in tests or specialized setups. Typically you want to use
  * `createApp` from `@backstage/frontend-defaults` instead.
  *
- * @deprecated Use {@link prepareSpecializedApp} instead.
+ * @deprecated Use `prepareSpecializedApp` instead.
  *
  * @public
  */

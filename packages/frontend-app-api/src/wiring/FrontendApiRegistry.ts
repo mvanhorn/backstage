@@ -107,7 +107,7 @@ export class FrontendApiResolver implements ApiHolder {
 
   private load<T>(ref: ApiRef<T>, loading: AnyApiRef[] = []): T | undefined {
     const existing = this.apis.get(ref.id);
-    if (existing) {
+    if (this.apis.has(ref.id)) {
       return existing as T;
     }
 
@@ -124,7 +124,7 @@ export class FrontendApiResolver implements ApiHolder {
     const deps = {} as { [name: string]: unknown };
     for (const [key, depRef] of Object.entries(factory.deps)) {
       const dep = this.load(depRef, [...loading, factory.api]);
-      if (!dep) {
+      if (dep === undefined) {
         throw new Error(
           `No API factory available for dependency ${depRef} of dependent ${factory.api}`,
         );

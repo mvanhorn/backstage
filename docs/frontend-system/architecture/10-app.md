@@ -76,7 +76,7 @@ Note that you do not need to manually exclude packages that you also import expl
 
 Most apps should use `createApp` from `@backstage/frontend-defaults`, which takes care of all app preparation internally. For more advanced use cases there is also a lower-level `prepareSpecializedApp` API in `@backstage/frontend-app-api`.
 
-This API is useful when you need to render a bootstrap tree before the full app can be finalized, for example while waiting for sign-in or other session-dependent state. It gives you access to a bootstrap app tree immediately, notifies you when the finalized app is ready, and lets you reuse a prepared session in a later app instance.
+This API is useful when you need to render a bootstrap tree before the full app can be finalized, for example while waiting for sign-in or other session-dependent state. It gives you access to a bootstrap app tree immediately, lets you either subscribe to finalization with `onFinalized()` or finalize synchronously with `finalize()`, and lets you reuse a prepared session in a later app instance.
 
 ```tsx
 import {
@@ -98,7 +98,21 @@ const unsubscribe = preparedApp.onFinalized(
 );
 ```
 
-The `getBootstrapApp()` method exposes the partial app tree that is available during bootstrap. The `onFinalized()` method notifies you once the full app tree has been finalized, and `finalize(sessionState?)` can be used when you already have a reusable session state or when you want to bypass the asynchronous bootstrap flow in tests.
+The `getBootstrapApp()` method exposes the partial app tree that is available during bootstrap. If you call `onFinalized()`, you are subscribing to the bootstrap-owned finalization flow. In the sign-in case, the sign-in page receives an `onSignInSuccess` callback, and once it provides an identity through that callback the full app is finalized and `onFinalized()` subscribers are notified.
+
+If you instead call `finalize()`, you are taking ownership of finalization yourself. This only works when the app can be finalized synchronously, for example when all predicate context is already available or when you passed a reusable session state to `prepareSpecializedApp()` up front:
+
+```tsx
+const preparedApp = prepareSpecializedApp({
+  config,
+  features: [appPlugin, ...features],
+  advanced: {
+    sessionState,
+  },
+});
+
+const app = preparedApp.finalize();
+```
 
 When using phased app preparation, `app/root.children` acts as the main session boundary. Conditional extensions behind that boundary are evaluated during finalization. Conditional `app/root.elements` and API branches are also deferred until finalization, while other bootstrap-visible predicates are ignored and reported as warnings.
 

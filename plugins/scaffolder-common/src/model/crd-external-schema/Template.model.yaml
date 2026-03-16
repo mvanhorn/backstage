@@ -1,0 +1,20 @@
+apiVersion: modelextensions.backstage.io/v1
+kind: KindDefinition
+metadata:
+  name: templates.scaffolder.backstage.io
+spec:
+  group: scaffolder.backstage.io
+  names:
+    kind: Template
+    singular: template
+    plural: templates
+  versions:
+    - name: v1beta3
+      relationFields:
+        - selector: { path: 'spec.owner' }
+          defaultKind: Group
+          defaultNamespace: inherit
+          allowedKinds: [Group, User]
+      schema:
+        openAPIV3Schema:
+          $json: ./Template.v1beta3.schema.json

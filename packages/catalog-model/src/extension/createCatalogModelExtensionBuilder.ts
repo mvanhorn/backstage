@@ -70,12 +70,10 @@ export interface CatalogModelExtensionBuilder {
 export class DefaultCatalogModelExtensionBuilder
   implements CatalogModelExtensionBuilder
 {
-  readonly #pluginId: string;
-  readonly #modelName?: string;
+  readonly #modelName: string;
   readonly #ops: CatalogModelOp[];
 
-  constructor(options: { pluginId: string; modelName?: string }) {
-    this.#pluginId = options.pluginId;
+  constructor(options: { modelName: string }) {
     this.#modelName = options.modelName;
     this.#ops = [];
   }
@@ -102,7 +100,6 @@ export class DefaultCatalogModelExtensionBuilder
 
   build(): CatalogModelExtension {
     return OpaqueCatalogModelExtension.createInstance('v1', {
-      pluginId: this.#pluginId,
       modelName: this.#modelName,
       ops: this.#ops.slice(),
     });
@@ -120,8 +117,7 @@ export class DefaultCatalogModelExtensionBuilder
  * complete picture out of them.
  */
 export function createCatalogModelExtensionBuilder(options: {
-  pluginId: string;
-  modelName?: string;
+  modelName: string;
 }): CatalogModelExtensionBuilder & { build(): CatalogModelExtension } {
   return new DefaultCatalogModelExtensionBuilder(options);
 }

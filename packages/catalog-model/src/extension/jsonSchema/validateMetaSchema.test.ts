@@ -24,9 +24,9 @@ describe('validateMetaSchema', () => {
         name: { type: 'string' },
       },
     };
-    expect(validateMetaSchema(simpleSchema)).toEqual(simpleSchema);
+    expect(validateMetaSchema(simpleSchema)).toEqual(true);
     const complexSchema = require('../../schema/kinds/Component.v1alpha1.schema.json');
-    expect(validateMetaSchema(complexSchema)).toEqual(complexSchema);
+    expect(validateMetaSchema(complexSchema)).toEqual(true);
   });
 
   it('should throw an error for an invalid schema', () => {

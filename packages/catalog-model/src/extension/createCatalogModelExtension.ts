@@ -14,17 +14,27 @@
  * limitations under the License.
  */
 
-export { compileCatalogModel } from './compileCatalogModel';
-export {
+import {
+  CatalogModelExtensionBuilder,
   createCatalogModelExtensionBuilder,
-  type CatalogModelExtensionBuilder,
 } from './createCatalogModelExtensionBuilder';
-export { createCatalogModelExtension } from './createCatalogModelExtension';
-export * from './jsonSchema';
-export * from './modelActions';
-export type {
-  CatalogModel,
-  CatalogModelExtension,
-  CatalogModelKind,
-  CatalogModelRelation,
-} from './types';
+import { CatalogModelExtension } from './types';
+
+/**
+ * Creates a catalog model extension using a builder pattern.
+ *
+ * @alpha
+ * @remarks
+ *
+ * Plugins can create such catalog model extensions to declare various
+ * contributions to the overall catalog model, and registering them with the
+ * catalog which then forms a complete picture out of them.
+ */
+export function createCatalogModelExtension(
+  modelName: string,
+  model: (model: CatalogModelExtensionBuilder) => void,
+): CatalogModelExtension {
+  const builder = createCatalogModelExtensionBuilder({ modelName });
+  model(builder);
+  return builder.build();
+}

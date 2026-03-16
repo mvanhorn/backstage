@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { mergeJsonSchemas } from './merge';
+import { mergeJsonSchemas } from './mergeJsonSchemas';
 
 describe('mergeJsonSchemas', () => {
   it('should merge scalar properties from source into target', () => {

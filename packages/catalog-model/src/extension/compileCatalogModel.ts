@@ -17,158 +17,22 @@
 import { InputError } from '@backstage/errors';
 import { JsonObject } from '@backstage/types';
 import lodash from 'lodash';
-import { mergeJsonSchemas } from './jsonSchema/merge';
-import { CatalogModelOp } from './operations';
+import { mergeJsonSchemas } from './jsonSchema/mergeJsonSchemas';
+import { CatalogModelOp, ops } from './operations';
 import { OpDeclareKindV1 } from './operations/declareKind';
 import { OpDeclareKindVersionV1 } from './operations/declareKindVersion';
 import { OpDeclareRelationV1 } from './operations/declareRelation';
 import { OpUpdateKindV1 } from './operations/updateKind';
 import { OpUpdateKindVersionV1 } from './operations/updateKindVersion';
 import { OpUpdateRelationV1 } from './operations/updateRelation';
-import { CatalogModelExtension, OpaqueCatalogModelExtension } from './types';
+import {
+  CatalogModel,
+  CatalogModelExtension,
+  OpaqueCatalogModel,
+  OpaqueCatalogModelExtension,
+} from './types';
 
-/**
- * A compiled catalog model kind.
- *
- * @alpha
- */
-export interface CatalogModelKind {
-  /**
-   * The API version(s) of the kind that this schema applies to, e.g.
-   * "backstage.io/v1alpha1".
-   */
-  apiVersions: string[];
-
-  /**
-   * The names used for this kind.
-   */
-  names: {
-    /**
-     * The name of the kind with proper casing, e.g. "Component".
-     */
-    kind: string;
-
-    /**
-     * The singular form of the kind name, e.g. "component".
-     */
-    singular: string;
-
-    /**
-     * The plural form of the kind name, e.g. "components".
-     */
-    plural: string;
-  };
-
-  /**
-   * The relation fields declared for this kind, with full dot-separated paths
-   * into the entity (e.g. "spec.owner").
-   */
-  relationFields: Array<{
-    /**
-     * The full dot-separated path to the field in the entity, e.g. "spec.owner".
-     */
-    path: string;
-    /**
-     * The relation type that this field generates, e.g. "ownedBy".
-     */
-    relation: string;
-    /**
-     * The default kind for parsing shorthand entity refs.
-     */
-    defaultKind?: string;
-    /**
-     * The default namespace for parsing shorthand entity refs.
-     */
-    defaultNamespace?: 'inherit' | 'default';
-    /**
-     * The kinds that are allowed as targets for this relation field.
-     */
-    allowedKinds?: string[];
-  }>;
-
-  /**
-   * The JSON schema of the kind.
-   *
-   * @remarks
-   *
-   * This can be used for validation of entities. Note that it is up to the
-   * caller to ensure that the kind and apiVersion match what you are validating
-   * against.
-   */
-  jsonSchema: JsonObject;
-}
-
-/**
- * A compiled catalog model relation.
- *
- * @alpha
- */
-export interface CatalogModelRelation {
-  /**
-   * The kinds that this relation can originate from.
-   */
-  fromKind: string[];
-  /**
-   * The kinds that this relation can point to.
-   */
-  toKind: string[];
-  /**
-   * A human-readable comment describing the relation.
-   */
-  comment: string;
-  /**
-   * The forward direction of this relation.
-   */
-  forward: {
-    type: string;
-    singular: string;
-    plural: string;
-  };
-  /**
-   * The reverse direction of this relation.
-   */
-  reverse: {
-    type: string;
-    singular: string;
-    plural: string;
-  };
-}
-
-/**
- * A compiled catalog model.
- *
- * @alpha
- */
-export interface CatalogModel {
-  /**
-   * All of the ops that were used to build this model, in the order they were
-   * applied.
-   */
-  ops: ReadonlyArray<CatalogModelOp>;
-
-  /**
-   * Look up a kind in the model.
-   *
-   * @returns The kind if found, or `undefined` if no matching kind exists.
-   * @throws TypeError if the kind exists in the model, but not for this apiVersion or type.
-   */
-  getKind(
-    options:
-      | { kind: string; apiVersion: string; type?: string }
-      | { kind: string; apiVersion: string; spec: { type?: string } },
-  ): CatalogModelKind | undefined;
-  /**
-   * Look up all relations that originate from a given kind.
-   *
-   * @param kind - The kind name, e.g. "Component".
-   * @returns The relations originating from the kind, or `undefined` if the
-   *   kind is not known.
-   */
-  getRelations(kind: string): CatalogModelRelation[] | undefined;
-}
-
-// #region Internal types used during compilation
-
+// #region Internal types
 interface KindState {
   group: string;
   singular: string;
@@ -201,22 +65,12 @@ interface RelationState {
 
 // #region Op sorting
 
-const OP_SORT_ORDER: { [K in CatalogModelOp['op']]: number } = {
-  'declareKind.v1': 0,
-  'declareKindVersion.v1': 1,
-  'declareRelation.v1': 2,
-  'updateKind.v1': 3,
-  'updateKindVersion.v1': 4,
-  'updateRelation.v1': 5,
-  'declareAnnotation.v1': 6,
-};
-
 /**
  * Sorts ops so that declarations come before updates, while preserving the
  * relative order of ops with the same priority (stable sort).
  */
-function sortOps(ops: CatalogModelOp[]): CatalogModelOp[] {
-  return lodash.sortBy(ops, op => OP_SORT_ORDER[op.op] ?? 99);
+function sortOps(input: CatalogModelOp[]): CatalogModelOp[] {
+  return lodash.sortBy(input, op => ops[op.op].order);
 }
 
 // #endregion
@@ -445,7 +299,7 @@ export function compileCatalogModel(
     }
   }
 
-  return {
+  return OpaqueCatalogModel.createInstance('v1', {
     ops: sortedOps,
 
     getKind(options) {
@@ -508,7 +362,7 @@ export function compileCatalogModel(
           reverse: r.reverse,
         }));
     },
-  };
+  });
 }
 
 // #endregion

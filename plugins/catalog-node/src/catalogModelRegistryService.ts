@@ -22,13 +22,13 @@ import {
 import {
   type CatalogModelExtension,
   type CatalogModelExtensionBuilder,
-  createCatalogModelExtensionBuilder,
+  createCatalogModelExtension,
 } from '@backstage/catalog-model/alpha';
 import express, { type Router } from 'express';
 import PromiseRouter from 'express-promise-router';
 
 /**
- * A registry for catalog model extensions.
+ * Service for registering and managing distributed catalog model extensions.
  *
  * @alpha
  * @remarks
@@ -37,9 +37,11 @@ import PromiseRouter from 'express-promise-router';
  * backend service to consume.
  */
 export interface CatalogModelRegistryService {
-  registerModelExtension(
-    modelName: string,
-    factory: (model: CatalogModelExtensionBuilder) => void,
+  register(
+    modelExtensionName: string,
+    extension:
+      | CatalogModelExtension
+      | ((model: CatalogModelExtensionBuilder) => void),
   ): void;
 }
 
@@ -52,23 +54,31 @@ export class DefaultCatalogModelRegistryService
   implements CatalogModelRegistryService
 {
   readonly #pluginId: string;
-  readonly #extensions: CatalogModelExtension[];
+  readonly #registrations: Array<{
+    modelExtensionName: string;
+    extension: CatalogModelExtension;
+  }>;
 
-  constructor(options: { pluginId: string }) {
-    this.#pluginId = options.pluginId;
-    this.#extensions = [];
+  constructor(pluginId: string) {
+    this.#pluginId = pluginId;
+    this.#registrations = [];
   }
 
-  registerModelExtension(
-    modelName: string,
-    factory: (model: CatalogModelExtensionBuilder) => void,
+  register(
+    modelExtensionName: string,
+    extensionOrFactory:
+      | CatalogModelExtension
+      | ((model: CatalogModelExtensionBuilder) => void),
   ): void {
-    const builder = createCatalogModelExtensionBuilder({
-      pluginId: this.#pluginId,
-      modelName,
+    const extension =
+      typeof extensionOrFactory === 'function'
+        ? createCatalogModelExtension(extensionOrFactory)
+        : extensionOrFactory;
+
+    this.#registrations.push({
+      modelExtensionName,
+      extension,
     });
-    factory(builder);
-    this.#extensions.push(builder.build());
   }
 
   getRouter(): Router {
@@ -77,7 +87,10 @@ export class DefaultCatalogModelRegistryService
       '/.backstage/catalog-model/v1/extensions',
       express.json(),
       (_req, res) => {
-        res.json({ extensions: this.#extensions });
+        res.json({
+          pluginId: this.#pluginId,
+          extensions: this.#registrations,
+        });
       },
     );
     return router;
@@ -85,7 +98,11 @@ export class DefaultCatalogModelRegistryService
 }
 
 /**
- * The service ref for {@link CatalogModelRegistryService}.
+ * Service for registering and managing distributed catalog model extensions.
+ *
+ * See {@link CatalogModelRegistryService}
+ * and {@link https://backstage.io/docs/features/software-catalog/extending-the-model | the model extension docs}
+ * for more information.
  *
  * @alpha
  */
@@ -100,12 +117,10 @@ export const catalogModelRegistryServiceRef =
           pluginMetadata: coreServices.pluginMetadata,
         },
         async factory({ httpRouter, pluginMetadata }) {
-          const registry = new DefaultCatalogModelRegistryService({
-            pluginId: pluginMetadata.getId(),
-          });
-
+          const registry = new DefaultCatalogModelRegistryService(
+            pluginMetadata.getId(),
+          );
           httpRouter.use(registry.getRouter());
-
           return registry;
         },
       }),

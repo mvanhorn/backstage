@@ -15,6 +15,7 @@
  */
 
 import { ConfigReader } from '@backstage/config';
+import { isError } from '@backstage/errors';
 import {
   ApiBlueprint,
   AnyApiFactory,
@@ -450,17 +451,6 @@ export function prepareSpecializedApp(
     return sessionStatePromise;
   }
 
-  function startSignInFinalize(
-    runtime: SignInRuntime,
-    identityApi: IdentityApi,
-  ): Promise<SpecializedAppSessionState> {
-    runtime.readyIdentityApi = identityApi;
-    return getSessionState().catch(error => {
-      runtime.error = error;
-      throw error;
-    });
-  }
-
   function finalizeFromSessionState(
     finalizedSessionState: SpecializedAppSessionState,
   ): FinalizedSpecializedApp {
@@ -597,14 +587,16 @@ export function prepareSpecializedApp(
     }
     finalization.started = true;
 
-    void loader
+    loader
       .then(sessionState => {
         const finalizedApp = finalizeFromSessionState(sessionState);
         finalization.resolve(finalizedApp);
       })
       .catch(error => {
         try {
-          const finalizedApp = finalizeFromBootstrapError(asError(error));
+          const finalizedApp = finalizeFromBootstrapError(
+            isError(error) ? error : new Error(String(error)),
+          );
           finalization.resolve(finalizedApp);
         } catch (finalizationError) {
           finalizationState = undefined;
@@ -626,7 +618,13 @@ export function prepareSpecializedApp(
     if (!providedSessionState) {
       phase.identityApiProxy.setTargetHandlers({
         onTargetSet(identityApi) {
-          beginFinalization(startSignInFinalize(runtime, identityApi));
+          runtime.readyIdentityApi = identityApi;
+          beginFinalization(
+            getSessionState().catch(error => {
+              runtime.error = error;
+              throw error;
+            }),
+          );
         },
       });
     }
@@ -683,7 +681,7 @@ export function prepareSpecializedApp(
       const finalizedAppPromise = signInRuntime?.requiresSignIn
         ? getFinalizationState().promise
         : beginFinalization(getSessionState());
-      void finalizedAppPromise
+      finalizedAppPromise
         .then(finalizedApp => {
           if (subscribed) {
             callback(finalizedApp);
@@ -913,20 +911,6 @@ function isSessionBoundaryAttachment(node: AppNode, input: string) {
   return node.spec.id === 'app/root' && input === 'children';
 }
 
-function createReactElementInstance(value: ReactNode): AppNodeInstance {
-  return {
-    getDataRefs() {
-      return [coreExtensionData.reactElement].values();
-    },
-    getData<TValue>(dataRef: ExtensionDataRef<TValue>) {
-      if (dataRef.id === coreExtensionData.reactElement.id) {
-        return value as TValue;
-      }
-      return undefined;
-    },
-  };
-}
-
 function attachThrowingFinalizationChild(tree: AppTree, error: Error) {
   const bootstrapChildNode =
     getAppRootNode(tree)?.edges.attachments.get('children')?.[0];
@@ -938,26 +922,21 @@ function attachThrowingFinalizationChild(tree: AppTree, error: Error) {
     throw error;
   }
 
-  setNodeInstance(
-    bootstrapChildNode,
-    createReactElementInstance(<ThrowBootstrapError />),
-  );
-}
-
-function setNodeInstance(node: AppNode, instance?: AppNodeInstance) {
-  (node as AppNode & { instance?: AppNodeInstance }).instance = instance;
+  (bootstrapChildNode as AppNode & { instance?: AppNodeInstance }).instance = {
+    getDataRefs() {
+      return [coreExtensionData.reactElement].values();
+    },
+    getData<TValue>(dataRef: ExtensionDataRef<TValue>) {
+      if (dataRef.id === coreExtensionData.reactElement.id) {
+        return (<ThrowBootstrapError />) as TValue;
+      }
+      return undefined;
+    },
+  };
 }
 
 function clearNodeInstance(node: AppNode) {
-  setNodeInstance(node, undefined);
-}
-
-function asError(error: unknown): Error {
-  if (error instanceof Error) {
-    return error;
-  }
-
-  return new Error(String(error));
+  (node as AppNode & { instance?: AppNodeInstance }).instance = undefined;
 }
 
 const EMPTY_API_HOLDER: ApiHolder = {

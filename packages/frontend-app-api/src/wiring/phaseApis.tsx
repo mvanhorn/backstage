@@ -166,25 +166,19 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
 
 export class PreparedAppIdentityProxy extends AppIdentityProxy {
   #onTargetSet?:
-    | ((
-        identityApi: Parameters<AppIdentityProxy['setTarget']>[0],
-      ) => Promise<void> | void)
+    | ((identityApi: Parameters<AppIdentityProxy['setTarget']>[0]) => void)
     | undefined;
-  #onTargetError?: ((error: unknown) => void) | undefined;
 
   setTargetHandlers(options: {
     onTargetSet?(
       identityApi: Parameters<AppIdentityProxy['setTarget']>[0],
-    ): Promise<void> | void;
-    onTargetError?(error: unknown): void;
+    ): void;
   }) {
     this.#onTargetSet = options.onTargetSet;
-    this.#onTargetError = options.onTargetError;
   }
 
   clearTargetHandlers() {
     this.#onTargetSet = undefined;
-    this.#onTargetError = undefined;
   }
 
   override setTarget(
@@ -198,16 +192,8 @@ export class PreparedAppIdentityProxy extends AppIdentityProxy {
       return;
     }
 
-    const onTargetError = this.#onTargetError;
     this.clearTargetHandlers();
-
-    try {
-      void Promise.resolve(onTargetSet(identityApi)).catch(error => {
-        onTargetError?.(error);
-      });
-    } catch (error) {
-      onTargetError?.(error);
-    }
+    onTargetSet(identityApi);
   }
 }
 

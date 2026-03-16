@@ -38,7 +38,7 @@ import {
   OpaqueFrontendPlugin,
 } from '@internal/frontend';
 import { OpaqueType } from '@internal/opaque';
-import { ComponentType, ReactNode, useSyncExternalStore } from 'react';
+import { ComponentType, ReactNode } from 'react';
 
 // eslint-disable-next-line @backstage/no-relative-monorepo-imports
 import {
@@ -148,12 +148,6 @@ type FinalizationState = {
   promise: Promise<FinalizedSpecializedApp>;
   resolve(app: FinalizedSpecializedApp): void;
   reject(error: unknown): void;
-};
-
-type BootstrapErrorStore = {
-  getSnapshot(): Error | undefined;
-  subscribe(listener: () => void): () => void;
-  report(error: Error): void;
 };
 
 type InternalSpecializedAppSessionState = {
@@ -372,7 +366,6 @@ export function prepareSpecializedApp(
     apis: phase.apis,
     predicateReferences,
   });
-  const bootstrapErrorStore = createBootstrapErrorStore();
   let signInRuntime: SignInRuntime | undefined;
   let cachedSessionState = providedSessionState;
   let sessionStatePromise: Promise<SpecializedAppSessionState> | undefined;
@@ -523,10 +516,49 @@ export function prepareSpecializedApp(
     return finalizedApp;
   }
 
-  function reportBootstrapFailure(error: unknown) {
-    const bootstrapFailure = asError(error);
-    bootstrapError = bootstrapFailure;
-    bootstrapErrorStore.report(bootstrapFailure);
+  function finalizeFromBootstrapError(error: Error): FinalizedSpecializedApp {
+    if (finalized) {
+      return finalized;
+    }
+
+    bootstrapError = error;
+    const finalizedSessionState =
+      cachedSessionState ??
+      OpaqueSpecializedAppSessionState.createInstance('v1', {
+        apis: phase.apis,
+        identityApi:
+          signInRuntime?.readyIdentityApi ?? providedSessionData?.identityApi,
+        predicateContext: EMPTY_PREDICATE_CONTEXT,
+      });
+    cachedSessionState = finalizedSessionState;
+
+    prepareFinalizedTree({
+      tree,
+    });
+    clearFinalizationBoundaryInstances(tree);
+    attachThrowingFinalizationChild(tree, error);
+    instantiateAndInitializePhaseTree({
+      tree,
+      apis: phase.apis,
+      collector,
+      extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
+      routeResolutionApi: phase.routeResolutionApi,
+      appTreeApi: phase.appTreeApi,
+      routeRefsById,
+    });
+
+    const element = tree.root.instance?.getData(coreExtensionData.reactElement);
+    if (!element) {
+      throw new Error('Expected finalized app tree to expose a root element');
+    }
+
+    const finalizedApp: FinalizedSpecializedApp = {
+      element,
+      sessionState: finalizedSessionState,
+      tree,
+    };
+    finalized = finalizedApp;
+    return finalizedApp;
   }
 
   function getFinalizationState(): FinalizationState {
@@ -571,10 +603,13 @@ export function prepareSpecializedApp(
         finalization.resolve(finalizedApp);
       })
       .catch(error => {
-        finalizationState = undefined;
-
-        reportBootstrapFailure(error);
-        finalization.reject(bootstrapError ?? asError(error));
+        try {
+          const finalizedApp = finalizeFromBootstrapError(asError(error));
+          finalization.resolve(finalizedApp);
+        } catch (finalizationError) {
+          finalizationState = undefined;
+          finalization.reject(finalizationError);
+        }
       });
 
     return finalization.promise;
@@ -591,12 +626,7 @@ export function prepareSpecializedApp(
     if (!providedSessionState) {
       phase.identityApiProxy.setTargetHandlers({
         onTargetSet(identityApi) {
-          return beginFinalization(
-            startSignInFinalize(runtime, identityApi),
-          ).then(() => {});
-        },
-        onTargetError(error) {
-          reportBootstrapFailure(error);
+          beginFinalization(startSignInFinalize(runtime, identityApi));
         },
       });
     }
@@ -610,7 +640,6 @@ export function prepareSpecializedApp(
       appTreeApi: phase.appTreeApi,
       extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
       disableSignIn: Boolean(providedSessionState),
-      bootstrapErrorStore,
       skipBootstrapChild({ child }) {
         return bootstrapClassification.deferredRoots.has(child);
       },
@@ -638,12 +667,6 @@ export function prepareSpecializedApp(
       getBootstrapApp();
 
       let subscribed = true;
-
-      if (bootstrapError) {
-        return () => {
-          subscribed = false;
-        };
-      }
 
       if (finalized) {
         const finalizedApp = finalized;
@@ -789,7 +812,6 @@ function createBootstrapApp(options: {
   appTreeApi: AppTreeApiProxy;
   extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
   disableSignIn?: boolean;
-  bootstrapErrorStore: BootstrapErrorStore;
   skipBootstrapChild?(ctx: {
     node: AppNode;
     input: string;
@@ -800,11 +822,6 @@ function createBootstrapApp(options: {
   bootstrapApp: BootstrapSpecializedApp;
   requiresSignIn: boolean;
 } {
-  prepareBootstrapErrorThrower({
-    tree: options.tree,
-    store: options.bootstrapErrorStore,
-  });
-
   const signInPageNode = getAppRootNode(options.tree)?.edges.attachments.get(
     'signInPage',
   )?.[0];
@@ -817,6 +834,8 @@ function createBootstrapApp(options: {
     routeResolutionApi: options.routeResolutionApi,
     appTreeApi: options.appTreeApi,
     routeRefsById: options.routeRefsById,
+    stopAtAttachment: ({ node, input }) =>
+      isSessionBoundaryAttachment(node, input),
     skipChild: options.skipBootstrapChild,
     onMissingApi: options.onMissingApi,
   });
@@ -844,37 +863,6 @@ function prepareFinalizedTree(options: { tree: AppTree }) {
     const attachments = appRootNode.edges.attachments as Map<string, AppNode[]>;
     attachments.delete('signInPage');
   }
-}
-
-function prepareBootstrapErrorThrower(options: {
-  tree: AppTree;
-  store: BootstrapErrorStore;
-}) {
-  const bootstrapChildNode = getAppRootNode(
-    options.tree,
-  )?.edges.attachments.get('children')?.[0];
-  if (!bootstrapChildNode) {
-    return;
-  }
-
-  function BootstrapErrorThrower() {
-    const bootstrapError = useSyncExternalStore(
-      options.store.subscribe,
-      options.store.getSnapshot,
-      options.store.getSnapshot,
-    );
-
-    if (bootstrapError) {
-      throw bootstrapError;
-    }
-
-    return null;
-  }
-
-  setNodeInstance(
-    bootstrapChildNode,
-    createReactElementInstance(<BootstrapErrorThrower />),
-  );
 }
 
 function clearFinalizationBoundaryInstances(tree: AppTree) {
@@ -939,27 +927,21 @@ function createReactElementInstance(value: ReactNode): AppNodeInstance {
   };
 }
 
-function createBootstrapErrorStore(): BootstrapErrorStore {
-  let snapshot: Error | undefined;
-  const listeners = new Set<() => void>();
+function attachThrowingFinalizationChild(tree: AppTree, error: Error) {
+  const bootstrapChildNode =
+    getAppRootNode(tree)?.edges.attachments.get('children')?.[0];
+  if (!bootstrapChildNode) {
+    throw error;
+  }
 
-  return {
-    getSnapshot() {
-      return snapshot;
-    },
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    report(error) {
-      snapshot = error;
-      for (const listener of listeners) {
-        listener();
-      }
-    },
-  };
+  function ThrowBootstrapError(): never {
+    throw error;
+  }
+
+  setNodeInstance(
+    bootstrapChildNode,
+    createReactElementInstance(<ThrowBootstrapError />),
+  );
 }
 
 function setNodeInstance(node: AppNode, instance?: AppNodeInstance) {

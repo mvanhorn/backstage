@@ -24,9 +24,12 @@ import { CreateAppRouteBinder } from '../routing';
 import { FrontendPluginInfoResolver } from './createPluginInfoAttacher';
 import {
   createSessionStateFromApis,
+  CreateSpecializedAppInternalOptions,
   FinalizedSpecializedApp,
   prepareSpecializedApp,
 } from './prepareSpecializedApp';
+
+export type { CreateSpecializedAppInternalOptions };
 
 /**
  * Options for {@link createSpecializedApp}.

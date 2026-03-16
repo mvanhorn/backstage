@@ -1362,8 +1362,9 @@ describe('createSpecializedApp', () => {
       if (!onSignInSuccess) {
         throw new Error('Expected sign-in success callback to be captured');
       }
+      const triggerSignInSuccess = onSignInSuccess;
       act(() => {
-        onSignInSuccess(identityApi);
+        triggerSignInSuccess(identityApi);
       });
 
       const finalizedApp = await finalizedAppPromise;
@@ -1445,8 +1446,9 @@ describe('createSpecializedApp', () => {
       if (!onSignInSuccess) {
         throw new Error('Expected sign-in success callback to be captured');
       }
+      const triggerSignInSuccess = onSignInSuccess;
       act(() => {
-        onSignInSuccess(identityApi);
+        triggerSignInSuccess(identityApi);
       });
 
       const finalizedApp = await finalizedAppPromise;
@@ -1529,8 +1531,9 @@ describe('createSpecializedApp', () => {
       if (!onSignInSuccess) {
         throw new Error('Expected sign-in success callback to be captured');
       }
+      const triggerSignInSuccess = onSignInSuccess;
       act(() => {
-        onSignInSuccess(identityApi);
+        triggerSignInSuccess(identityApi);
       });
 
       const finalizedApp = await finalizedAppPromise;
@@ -1791,8 +1794,9 @@ describe('createSpecializedApp', () => {
       if (!onSignInSuccess) {
         throw new Error('Expected sign-in success callback to be captured');
       }
+      const triggerSignInSuccess = onSignInSuccess;
       act(() => {
-        onSignInSuccess(identityApi);
+        triggerSignInSuccess(identityApi);
       });
       expect(() => preparedApp.finalize()).toThrow(
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',

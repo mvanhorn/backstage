@@ -451,106 +451,6 @@ export function prepareSpecializedApp(
     return sessionStatePromise;
   }
 
-  function finalizeFromSessionState(
-    finalizedSessionState: SpecializedAppSessionState,
-  ): FinalizedSpecializedApp {
-    if (finalized) {
-      return finalized;
-    }
-
-    cachedSessionState = finalizedSessionState;
-    const sessionStateData = OpaqueSpecializedAppSessionState.toInternal(
-      finalizedSessionState,
-    );
-    updateIdentityApiTarget(sessionStateData.identityApi);
-    if (!providedApis) {
-      syncFinalApiFactories({
-        deferredApiNodes: bootstrapClassification.deferredApiRoots,
-        appApiRegistry,
-        apiResolver: phase.apis,
-        collector,
-        features,
-        bootstrapApiFactoryEntries,
-        bootstrapMissingApiAccesses,
-        predicateContext: sessionStateData.predicateContext,
-      });
-    }
-
-    prepareFinalizedTree({
-      tree,
-    });
-    clearFinalizationBoundaryInstances(tree);
-    instantiateAndInitializePhaseTree({
-      tree,
-      apis: phase.apis,
-      collector,
-      extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
-      routeResolutionApi: phase.routeResolutionApi,
-      appTreeApi: phase.appTreeApi,
-      routeRefsById,
-      predicateContext: sessionStateData.predicateContext,
-    });
-
-    const element = tree.root.instance?.getData(coreExtensionData.reactElement);
-    if (!element) {
-      throw new Error('Expected finalized app tree to expose a root element');
-    }
-
-    const finalizedApp: FinalizedSpecializedApp = {
-      element,
-      sessionState: finalizedSessionState,
-      tree,
-      errors: collector.collectErrors(),
-    };
-    finalized = finalizedApp;
-    return finalizedApp;
-  }
-
-  function finalizeFromBootstrapError(error: Error): FinalizedSpecializedApp {
-    if (finalized) {
-      return finalized;
-    }
-
-    bootstrapError = error;
-    const finalizedSessionState =
-      cachedSessionState ??
-      OpaqueSpecializedAppSessionState.createInstance('v1', {
-        apis: phase.apis,
-        identityApi:
-          signInRuntime?.readyIdentityApi ?? providedSessionData?.identityApi,
-        predicateContext: EMPTY_PREDICATE_CONTEXT,
-      });
-    cachedSessionState = finalizedSessionState;
-
-    prepareFinalizedTree({
-      tree,
-    });
-    clearFinalizationBoundaryInstances(tree);
-    attachThrowingFinalizationChild(tree, error);
-    instantiateAndInitializePhaseTree({
-      tree,
-      apis: phase.apis,
-      collector,
-      extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
-      routeResolutionApi: phase.routeResolutionApi,
-      appTreeApi: phase.appTreeApi,
-      routeRefsById,
-    });
-
-    const element = tree.root.instance?.getData(coreExtensionData.reactElement);
-    if (!element) {
-      throw new Error('Expected finalized app tree to expose a root element');
-    }
-
-    const finalizedApp: FinalizedSpecializedApp = {
-      element,
-      sessionState: finalizedSessionState,
-      tree,
-    };
-    finalized = finalizedApp;
-    return finalizedApp;
-  }
-
   function getFinalizationState(): FinalizationState {
     if (finalizationState) {
       return finalizationState;
@@ -589,14 +489,48 @@ export function prepareSpecializedApp(
 
     loader
       .then(sessionState => {
-        const finalizedApp = finalizeFromSessionState(sessionState);
+        const result = finalizeFromSessionState({
+          finalized,
+          finalizedSessionState: sessionState,
+          tree,
+          collector,
+          phase,
+          extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
+          routeRefsById,
+          appBasePath,
+          providedApis,
+          features,
+          appApiRegistry,
+          bootstrapClassification,
+          bootstrapApiFactoryEntries,
+          bootstrapMissingApiAccesses,
+        });
+        cachedSessionState = result.cachedSessionState;
+        finalized = result.finalizedApp;
+        const finalizedApp = result.finalizedApp;
         finalization.resolve(finalizedApp);
       })
       .catch(error => {
         try {
-          const finalizedApp = finalizeFromBootstrapError(
-            isError(error) ? error : new Error(String(error)),
-          );
+          const bootstrapFailure = isError(error)
+            ? error
+            : new Error(String(error));
+          bootstrapError = bootstrapFailure;
+          const result = finalizeFromBootstrapError({
+            finalized,
+            error: bootstrapFailure,
+            cachedSessionState,
+            tree,
+            collector,
+            phase,
+            extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
+            routeRefsById,
+            signInRuntime,
+            providedSessionData,
+          });
+          cachedSessionState = result.cachedSessionState;
+          finalized = result.finalizedApp;
+          const finalizedApp = result.finalizedApp;
           finalization.resolve(finalizedApp);
         } catch (finalizationError) {
           finalizationState = undefined;
@@ -726,7 +660,24 @@ export function prepareSpecializedApp(
         );
       }
 
-      finalized = finalizeFromSessionState(finalizedSessionState);
+      const result = finalizeFromSessionState({
+        finalized,
+        finalizedSessionState,
+        tree,
+        collector,
+        phase,
+        extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
+        routeRefsById,
+        appBasePath,
+        providedApis,
+        features,
+        appApiRegistry,
+        bootstrapClassification,
+        bootstrapApiFactoryEntries,
+        bootstrapMissingApiAccesses,
+      });
+      cachedSessionState = result.cachedSessionState;
+      finalized = result.finalizedApp;
       finalizationState?.resolve(finalized);
       return finalized;
     },
@@ -800,6 +751,151 @@ type BootstrapClassification = {
   deferredElementRoots: Set<AppNode>;
   deferredRoots: Set<AppNode>;
 };
+
+type FinalizationResult = {
+  finalizedApp: FinalizedSpecializedApp;
+  cachedSessionState: SpecializedAppSessionState;
+};
+
+function finalizeFromSessionState(options: {
+  finalized?: FinalizedSpecializedApp;
+  finalizedSessionState: SpecializedAppSessionState;
+  tree: AppTree;
+  collector: ErrorCollector;
+  phase: ReturnType<typeof createPhaseApis>;
+  extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
+  routeRefsById: ReturnType<typeof collectRouteIds>;
+  appBasePath: string;
+  providedApis?: ApiHolder;
+  features: FrontendFeature[];
+  appApiRegistry: FrontendApiRegistry;
+  bootstrapClassification: BootstrapClassification;
+  bootstrapApiFactoryEntries: Map<string, ApiFactoryEntry>;
+  bootstrapMissingApiAccesses: Map<string, { node: AppNode; apiRefId: string }>;
+}): FinalizationResult {
+  if (options.finalized) {
+    return {
+      finalizedApp: options.finalized,
+      cachedSessionState: options.finalized.sessionState,
+    };
+  }
+
+  const sessionStateData = OpaqueSpecializedAppSessionState.toInternal(
+    options.finalizedSessionState,
+  );
+  if (sessionStateData.identityApi) {
+    setIdentityApiTarget({
+      identityApiProxy: options.phase.identityApiProxy,
+      identityApi: sessionStateData.identityApi,
+      signOutTargetUrl: options.appBasePath || '/',
+    });
+  }
+  if (!options.providedApis) {
+    syncFinalApiFactories({
+      deferredApiNodes: options.bootstrapClassification.deferredApiRoots,
+      appApiRegistry: options.appApiRegistry,
+      apiResolver: options.phase.apis,
+      collector: options.collector,
+      features: options.features,
+      bootstrapApiFactoryEntries: options.bootstrapApiFactoryEntries,
+      bootstrapMissingApiAccesses: options.bootstrapMissingApiAccesses,
+      predicateContext: sessionStateData.predicateContext,
+    });
+  }
+
+  prepareFinalizedTree({
+    tree: options.tree,
+  });
+  clearFinalizationBoundaryInstances(options.tree);
+  instantiateAndInitializePhaseTree({
+    tree: options.tree,
+    apis: options.phase.apis,
+    collector: options.collector,
+    extensionFactoryMiddleware: options.extensionFactoryMiddleware,
+    routeResolutionApi: options.phase.routeResolutionApi,
+    appTreeApi: options.phase.appTreeApi,
+    routeRefsById: options.routeRefsById,
+    predicateContext: sessionStateData.predicateContext,
+  });
+
+  const element = options.tree.root.instance?.getData(
+    coreExtensionData.reactElement,
+  );
+  if (!element) {
+    throw new Error('Expected finalized app tree to expose a root element');
+  }
+
+  return {
+    finalizedApp: {
+      element,
+      sessionState: options.finalizedSessionState,
+      tree: options.tree,
+      errors: options.collector.collectErrors(),
+    },
+    cachedSessionState: options.finalizedSessionState,
+  };
+}
+
+function finalizeFromBootstrapError(options: {
+  finalized?: FinalizedSpecializedApp;
+  error: Error;
+  cachedSessionState?: SpecializedAppSessionState;
+  tree: AppTree;
+  collector: ErrorCollector;
+  phase: ReturnType<typeof createPhaseApis>;
+  extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
+  routeRefsById: ReturnType<typeof collectRouteIds>;
+  signInRuntime?: SignInRuntime;
+  providedSessionData?: InternalSpecializedAppSessionState;
+}): FinalizationResult {
+  if (options.finalized) {
+    return {
+      finalizedApp: options.finalized,
+      cachedSessionState: options.finalized.sessionState,
+    };
+  }
+
+  const cachedSessionState =
+    options.cachedSessionState ??
+    OpaqueSpecializedAppSessionState.createInstance('v1', {
+      apis: options.phase.apis,
+      identityApi:
+        options.signInRuntime?.readyIdentityApi ??
+        options.providedSessionData?.identityApi,
+      predicateContext: EMPTY_PREDICATE_CONTEXT,
+    });
+
+  prepareFinalizedTree({
+    tree: options.tree,
+  });
+  clearFinalizationBoundaryInstances(options.tree);
+  attachThrowingFinalizationChild(options.tree, options.error);
+  instantiateAndInitializePhaseTree({
+    tree: options.tree,
+    apis: options.phase.apis,
+    collector: options.collector,
+    extensionFactoryMiddleware: options.extensionFactoryMiddleware,
+    routeResolutionApi: options.phase.routeResolutionApi,
+    appTreeApi: options.phase.appTreeApi,
+    routeRefsById: options.routeRefsById,
+  });
+
+  const element = options.tree.root.instance?.getData(
+    coreExtensionData.reactElement,
+  );
+  if (!element) {
+    throw new Error('Expected finalized app tree to expose a root element');
+  }
+
+  return {
+    finalizedApp: {
+      element,
+      sessionState: cachedSessionState,
+      tree: options.tree,
+    },
+    cachedSessionState,
+  };
+}
 
 function createBootstrapApp(options: {
   tree: AppTree;

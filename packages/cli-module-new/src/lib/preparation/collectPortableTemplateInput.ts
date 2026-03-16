@@ -30,7 +30,7 @@ import { resolvePackageParams } from './resolvePackageParams';
 import {
   knownBackendPluginPackageNameByPluginId,
   knownFrontendPluginPackageNameByPluginId,
-} from '../../../../lib/knownPluginPackages';
+} from '@backstage/cli-common';
 
 type CollectTemplateParamsOptions = {
   config: PortableTemplateConfig;

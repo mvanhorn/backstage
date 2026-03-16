@@ -30,7 +30,7 @@ import {
   extname,
 } from 'node:path';
 import { targetPaths } from '@backstage/cli-common';
-import { knownBackendPluginPackageNameByPluginId } from '../../../../lib/knownPluginPackages';
+import { knownBackendPluginPackageNameByPluginId } from '@backstage/cli-common';
 
 const SCRIPT_EXTS = ['.js', '.jsx', '.ts', '.tsx', '.json'];
 

@@ -29,6 +29,11 @@ const knownPluginIds = [
   'techdocs',
 ];
 
+/**
+ * Maps known plugin IDs to their corresponding backend package names.
+ *
+ * @public
+ */
 export const knownBackendPluginPackageNameByPluginId: Record<string, string> =
   Object.fromEntries(
     knownPluginIds.map(pluginId => [
@@ -37,6 +42,11 @@ export const knownBackendPluginPackageNameByPluginId: Record<string, string> =
     ]),
   );
 
+/**
+ * Maps known plugin IDs to their corresponding frontend package names.
+ *
+ * @public
+ */
 export const knownFrontendPluginPackageNameByPluginId: Record<string, string> =
   Object.fromEntries(
     knownPluginIds.map(pluginId => [pluginId, `@backstage/plugin-${pluginId}`]),

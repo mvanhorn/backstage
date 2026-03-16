@@ -188,8 +188,9 @@ export type ApiHolder = {
 
 // @public
 export type ApiRef<T> = {
-  id: string;
-  T: T;
+  readonly $$type: '@backstage/ApiRef';
+  readonly id: string;
+  readonly T: T;
 };
 
 // @public
@@ -417,6 +418,11 @@ export function createApiFactory<Api, Impl extends Api>(
 
 // @public
 export function createApiRef<T>(config: ApiRefConfig): ApiRef<T>;
+
+// @public
+export function createApiRef<T>(): {
+  with(config: ApiRefConfig): ApiRef<T>;
+};
 
 // @public
 export function createExtension<

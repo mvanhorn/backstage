@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Backstage Authors
+ * Copyright 2025 The Backstage Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,15 @@
  * limitations under the License.
  */
 
-export * from './apis';
-export * from './routing';
-export * from './wiring';
+import { ApiRef } from '@backstage/frontend-plugin-api';
+import { OpaqueType } from '@internal/opaque';
+
+export const OpaqueApiRef = OpaqueType.create<{
+  public: ApiRef<unknown>;
+  versions: {
+    readonly version: 'v1';
+  };
+}>({
+  type: '@backstage/ApiRef',
+  versions: ['v1'],
+});

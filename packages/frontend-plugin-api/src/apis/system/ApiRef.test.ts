@@ -17,8 +17,17 @@
 import { createApiRef } from './ApiRef';
 
 describe('ApiRef', () => {
-  it('should be created', () => {
+  it('should be created with config', () => {
     const ref = createApiRef({ id: 'abc' });
+    expect(ref.$$type).toBe('@backstage/ApiRef');
+    expect(ref.id).toBe('abc');
+    expect(String(ref)).toBe('apiRef{abc}');
+    expect(() => ref.T).toThrow('tried to read ApiRef.T of apiRef{abc}');
+  });
+
+  it('should be created with builder pattern', () => {
+    const ref = createApiRef<string>().with({ id: 'abc' });
+    expect(ref.$$type).toBe('@backstage/ApiRef');
     expect(ref.id).toBe('abc');
     expect(String(ref)).toBe('apiRef{abc}');
     expect(() => ref.T).toThrow('tried to read ApiRef.T of apiRef{abc}');
@@ -46,5 +55,11 @@ describe('ApiRef', () => {
         `API id must only contain period separated lowercase alphanum tokens with dashes, got '${id}'`,
       );
     }
+  });
+
+  it('should reject invalid ids with builder pattern', () => {
+    expect(() => createApiRef().with({ id: '123' })).toThrow(
+      `API id must only contain period separated lowercase alphanum tokens with dashes, got '123'`,
+    );
   });
 });

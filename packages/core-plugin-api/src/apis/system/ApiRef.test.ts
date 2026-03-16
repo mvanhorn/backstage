@@ -19,6 +19,7 @@ import { createApiRef } from './ApiRef';
 describe('ApiRef', () => {
   it('should be created', () => {
     const ref = createApiRef({ id: 'abc' });
+    expect(ref.$$type).toBe('@backstage/ApiRef');
     expect(ref.id).toBe('abc');
     expect(String(ref)).toBe('apiRef{abc}');
     expect(() => ref.T).toThrow('tried to read ApiRef.T of apiRef{abc}');

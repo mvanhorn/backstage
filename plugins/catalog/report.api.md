@@ -455,7 +455,7 @@ export function EntityRelationWarning(): JSX_2.Element | null;
 
 // @public (undocumented)
 export const EntitySwitch: {
-  (props: EntitySwitchProps): JSX_2.Element;
+  (props: EntitySwitchProps): JSX.Element;
   Case: (_props: EntitySwitchCaseProps) => null;
 };
 

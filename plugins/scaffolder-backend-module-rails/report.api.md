@@ -47,8 +47,9 @@ export function createFetchRailsAction(options: {
     values: {
       railsArguments?:
         | {
-            api?: boolean | undefined;
             template?: string | undefined;
+            api?: boolean | undefined;
+            force?: boolean | undefined;
             database?:
               | 'sqlite3'
               | 'mysql'
@@ -60,7 +61,6 @@ export function createFetchRailsAction(options: {
               | 'jdbcpostgresql'
               | 'jdbc'
               | undefined;
-            force?: boolean | undefined;
             minimal?: boolean | undefined;
             railsVersion?: 'edge' | 'master' | 'dev' | 'fromImage' | undefined;
             skipActionCable?: boolean | undefined;

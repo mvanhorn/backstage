@@ -154,7 +154,7 @@ export const createGitlabRepoPushAction: (options: {
     sourcePath?: string | undefined;
     targetPath?: string | undefined;
     token?: string | undefined;
-    commitAction?: 'auto' | 'create' | 'update' | 'delete' | undefined;
+    commitAction?: 'auto' | 'update' | 'delete' | 'create' | undefined;
   },
   {
     projectid: string;
@@ -193,7 +193,7 @@ export function createPublishGitlabAction(options: {
 }): TemplateAction<
   {
     repoUrl: string;
-    repoVisibility?: 'public' | 'internal' | 'private' | undefined;
+    repoVisibility?: 'internal' | 'private' | 'public' | undefined;
     defaultBranch?: string | undefined;
     gitCommitMessage?: string | undefined;
     gitAuthorName?: string | undefined;
@@ -206,24 +206,24 @@ export function createPublishGitlabAction(options: {
     topics?: string[] | undefined;
     settings?:
       | {
+          visibility?: 'internal' | 'private' | 'public' | undefined;
           path?: string | undefined;
           description?: string | undefined;
-          visibility?: 'public' | 'internal' | 'private' | undefined;
-          topics?: string[] | undefined;
           merge_method?: 'merge' | 'rebase_merge' | 'ff' | undefined;
+          topics?: string[] | undefined;
           auto_devops_enabled?: boolean | undefined;
-          ci_config_path?: string | undefined;
-          squash_option?:
-            | 'never'
-            | 'always'
-            | 'default_off'
-            | 'default_on'
-            | undefined;
+          only_allow_merge_if_pipeline_succeeds?: boolean | undefined;
+          allow_merge_on_skipped_pipeline?: boolean | undefined;
           only_allow_merge_if_all_discussions_are_resolved?:
             | boolean
             | undefined;
-          only_allow_merge_if_pipeline_succeeds?: boolean | undefined;
-          allow_merge_on_skipped_pipeline?: boolean | undefined;
+          squash_option?:
+            | 'always'
+            | 'never'
+            | 'default_on'
+            | 'default_off'
+            | undefined;
+          ci_config_path?: string | undefined;
         }
       | undefined;
     branches?:
@@ -236,15 +236,15 @@ export function createPublishGitlabAction(options: {
       | undefined;
     projectVariables?:
       | {
-          value: string;
           key: string;
+          value: string;
+          raw?: boolean | undefined;
           description?: string | undefined;
           protected?: boolean | undefined;
-          raw?: boolean | undefined;
           variable_type?: 'file' | 'env_var' | undefined;
           masked?: boolean | undefined;
-          masked_and_hidden?: boolean | undefined;
           environment_scope?: string | undefined;
+          masked_and_hidden?: boolean | undefined;
         }[]
       | undefined;
   },
@@ -271,7 +271,7 @@ export const createPublishGitlabMergeRequestAction: (options: {
     sourcePath?: string | undefined;
     targetPath?: string | undefined;
     token?: string | undefined;
-    commitAction?: 'auto' | 'create' | 'update' | 'delete' | 'skip' | undefined;
+    commitAction?: 'auto' | 'update' | 'delete' | 'create' | 'skip' | undefined;
     projectid?: string | undefined;
     removeSourceBranch?: boolean | undefined;
     assignee?: string | undefined;

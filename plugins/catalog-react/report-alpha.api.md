@@ -73,17 +73,17 @@ export const catalogReactTranslationRef: TranslationRef<
     readonly 'inspectEntityDialog.jsonPage.title': 'Entity as JSON';
     readonly 'inspectEntityDialog.jsonPage.description': 'This is the raw entity data as received from the catalog, on JSON form.';
     readonly 'inspectEntityDialog.overviewPage.title': 'Overview';
+    readonly 'inspectEntityDialog.overviewPage.metadata.title': 'Metadata';
+    readonly 'inspectEntityDialog.overviewPage.labels': 'Labels';
     readonly 'inspectEntityDialog.overviewPage.status.title': 'Status';
     readonly 'inspectEntityDialog.overviewPage.identity.title': 'Identity';
-    readonly 'inspectEntityDialog.overviewPage.metadata.title': 'Metadata';
     readonly 'inspectEntityDialog.overviewPage.annotations': 'Annotations';
     readonly 'inspectEntityDialog.overviewPage.tags': 'Tags';
-    readonly 'inspectEntityDialog.overviewPage.labels': 'Labels';
     readonly 'inspectEntityDialog.overviewPage.relation.title': 'Relations';
     readonly 'inspectEntityDialog.yamlPage.title': 'Entity as YAML';
     readonly 'inspectEntityDialog.yamlPage.description': 'This is the raw entity data as received from the catalog, on YAML form.';
-    readonly 'inspectEntityDialog.tabNames.yaml': 'Raw YAML';
     readonly 'inspectEntityDialog.tabNames.json': 'Raw JSON';
+    readonly 'inspectEntityDialog.tabNames.yaml': 'Raw YAML';
     readonly 'inspectEntityDialog.tabNames.overview': 'Overview';
     readonly 'inspectEntityDialog.tabNames.ancestry': 'Ancestry';
     readonly 'inspectEntityDialog.tabNames.colocated': 'Colocated';
@@ -108,17 +108,17 @@ export const catalogReactTranslationRef: TranslationRef<
     readonly 'userListPicker.personalFilter.ownedLabel': 'Owned';
     readonly 'userListPicker.personalFilter.starredLabel': 'Starred';
     readonly 'entityTableColumnTitle.name': 'Name';
-    readonly 'entityTableColumnTitle.namespace': 'Namespace';
-    readonly 'entityTableColumnTitle.title': 'Title';
-    readonly 'entityTableColumnTitle.description': 'Description';
     readonly 'entityTableColumnTitle.type': 'Type';
     readonly 'entityTableColumnTitle.label': 'Label';
+    readonly 'entityTableColumnTitle.title': 'Title';
+    readonly 'entityTableColumnTitle.description': 'Description';
+    readonly 'entityTableColumnTitle.system': 'System';
+    readonly 'entityTableColumnTitle.namespace': 'Namespace';
+    readonly 'entityTableColumnTitle.domain': 'Domain';
     readonly 'entityTableColumnTitle.tags': 'Tags';
     readonly 'entityTableColumnTitle.owner': 'Owner';
     readonly 'entityTableColumnTitle.lifecycle': 'Lifecycle';
-    readonly 'entityTableColumnTitle.system': 'System';
     readonly 'entityTableColumnTitle.targets': 'Targets';
-    readonly 'entityTableColumnTitle.domain': 'Domain';
     readonly 'missingAnnotationEmptyState.title': 'Missing Annotation';
     readonly 'missingAnnotationEmptyState.readMore': 'Read more';
     readonly 'missingAnnotationEmptyState.annotationYaml': 'Add the annotation to your {{entityKind}} YAML as shown in the highlighted example below:';
@@ -213,11 +213,11 @@ export const EntityCardBlueprint: ExtensionBlueprint<{
   inputs: {};
   config: {
     filter: FilterPredicate | undefined;
-    type: 'info' | 'content' | undefined;
+    type: 'content' | 'info' | undefined;
   };
   configInput: {
     filter?: FilterPredicate | undefined;
-    type?: 'info' | 'content' | undefined;
+    type?: 'content' | 'info' | undefined;
   };
   dataRefs: {
     filterFunction: ConfigurableExtensionDataRef<
@@ -305,10 +305,10 @@ export const EntityContentBlueprint: ExtensionBlueprint<{
   };
   configInput: {
     filter?: FilterPredicate | undefined;
-    path?: string | undefined;
     title?: string | undefined;
-    icon?: string | undefined;
+    path?: string | undefined;
     group?: string | false | undefined;
+    icon?: string | undefined;
   };
   dataRefs: {
     title: ConfigurableExtensionDataRef<
@@ -535,8 +535,8 @@ export const EntityIconLinkBlueprint: ExtensionBlueprint<{
   };
   configInput: {
     filter?: FilterPredicate | undefined;
-    title?: string | undefined;
     label?: string | undefined;
+    title?: string | undefined;
   };
   dataRefs: {
     useProps: ConfigurableExtensionDataRef<
@@ -561,8 +561,9 @@ export const EntityIconLinkBlueprint: ExtensionBlueprint<{
 export const EntityTableColumnTitle: (
   input: EntityTableColumnTitleProps,
 ) =>
-  | 'Domain'
   | 'System'
+  | 'Title'
+  | 'Domain'
   | 'Lifecycle'
   | 'Namespace'
   | 'Owner'
@@ -571,7 +572,6 @@ export const EntityTableColumnTitle: (
   | 'Name'
   | 'Description'
   | 'Targets'
-  | 'Title'
   | 'Label';
 
 // @alpha (undocumented)

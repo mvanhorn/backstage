@@ -144,8 +144,8 @@ const _default: OverridableFrontendPlugin<
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        title?: string | undefined;
         label?: string | undefined;
+        title?: string | undefined;
       };
       output:
         | ExtensionDataRef<
@@ -200,8 +200,8 @@ const _default: OverridableFrontendPlugin<
         title: string | undefined;
       };
       configInput: {
-        path?: string | undefined;
         title?: string | undefined;
+        path?: string | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>
@@ -572,24 +572,24 @@ export const scaffolderTranslationRef: TranslationRef<
     readonly 'fields.repoOwnerPicker.title': 'Owner';
     readonly 'fields.repoOwnerPicker.description': 'The owner of the repository';
     readonly 'aboutCard.launchTemplate': 'Launch Template';
-    readonly 'actionsPage.title': 'Installed actions';
-    readonly 'actionsPage.action.output': 'Output';
-    readonly 'actionsPage.action.input': 'Input';
-    readonly 'actionsPage.action.examples': 'Examples';
     readonly 'actionsPage.content.emptyState.title': 'No information to display';
     readonly 'actionsPage.content.emptyState.description': 'There are no actions installed or there was an issue communicating with backend.';
     readonly 'actionsPage.content.searchFieldPlaceholder': 'Search for an action';
+    readonly 'actionsPage.title': 'Installed actions';
+    readonly 'actionsPage.action.input': 'Input';
+    readonly 'actionsPage.action.output': 'Output';
+    readonly 'actionsPage.action.examples': 'Examples';
     readonly 'actionsPage.subtitle': 'This is the collection of all installed actions';
     readonly 'actionsPage.pageTitle': 'Create a New Component';
-    readonly 'listTaskPage.title': 'List template tasks';
     readonly 'listTaskPage.content.emptyState.title': 'No information to display';
     readonly 'listTaskPage.content.emptyState.description': 'There are no tasks or there was an issue communicating with backend.';
-    readonly 'listTaskPage.content.tableTitle': 'Tasks';
-    readonly 'listTaskPage.content.tableCell.status': 'Status';
     readonly 'listTaskPage.content.tableCell.template': 'Template';
+    readonly 'listTaskPage.content.tableCell.status': 'Status';
     readonly 'listTaskPage.content.tableCell.owner': 'Owner';
     readonly 'listTaskPage.content.tableCell.created': 'Created';
     readonly 'listTaskPage.content.tableCell.taskID': 'Task ID';
+    readonly 'listTaskPage.content.tableTitle': 'Tasks';
+    readonly 'listTaskPage.title': 'List template tasks';
     readonly 'listTaskPage.subtitle': 'All tasks that have been started';
     readonly 'listTaskPage.pageTitle': 'Templates Tasks';
     readonly 'ownerListPicker.title': 'Task Owner';
@@ -614,28 +614,28 @@ export const scaffolderTranslationRef: TranslationRef<
     readonly 'templateEditorForm.stepper.emptyText': 'There are no spec parameters in the template to preview.';
     readonly 'renderSchema.undefined': 'No schema defined';
     readonly 'renderSchema.tableCell.name': 'Name';
+    readonly 'renderSchema.tableCell.type': 'Type';
     readonly 'renderSchema.tableCell.title': 'Title';
     readonly 'renderSchema.tableCell.description': 'Description';
-    readonly 'renderSchema.tableCell.type': 'Type';
-    readonly 'templatingExtensions.title': 'Templating Extensions';
     readonly 'templatingExtensions.content.values.title': 'Values';
     readonly 'templatingExtensions.content.values.notAvailable': 'There are no global template values defined.';
     readonly 'templatingExtensions.content.emptyState.title': 'No information to display';
     readonly 'templatingExtensions.content.emptyState.description': 'There are no templating extensions available or there was an issue communicating with the backend.';
     readonly 'templatingExtensions.content.filters.title': 'Filters';
-    readonly 'templatingExtensions.content.filters.schema.output': 'Output';
     readonly 'templatingExtensions.content.filters.schema.input': 'Input';
+    readonly 'templatingExtensions.content.filters.schema.output': 'Output';
     readonly 'templatingExtensions.content.filters.schema.arguments': 'Arguments';
     readonly 'templatingExtensions.content.filters.examples': 'Examples';
     readonly 'templatingExtensions.content.filters.notAvailable': 'There are no template filters defined.';
     readonly 'templatingExtensions.content.filters.metadataAbsent': 'Filter metadata unavailable';
-    readonly 'templatingExtensions.content.searchFieldPlaceholder': 'Search for an extension';
     readonly 'templatingExtensions.content.functions.title': 'Functions';
     readonly 'templatingExtensions.content.functions.schema.output': 'Output';
     readonly 'templatingExtensions.content.functions.schema.arguments': 'Arguments';
     readonly 'templatingExtensions.content.functions.examples': 'Examples';
     readonly 'templatingExtensions.content.functions.notAvailable': 'There are no global template functions defined.';
     readonly 'templatingExtensions.content.functions.metadataAbsent': 'Function metadata unavailable';
+    readonly 'templatingExtensions.content.searchFieldPlaceholder': 'Search for an extension';
+    readonly 'templatingExtensions.title': 'Templating Extensions';
     readonly 'templatingExtensions.subtitle': 'This is the collection of available templating extensions';
     readonly 'templatingExtensions.pageTitle': 'Templating Extensions';
     readonly 'templateTypePicker.title': 'Categories';
@@ -699,12 +699,12 @@ export const scaffolderTranslationRef: TranslationRef<
     readonly 'templateEditorToolbar.addToCatalogDialogTitle': 'Publish changes';
     readonly 'templateEditorToolbar.addToCatalogDialogContent.stepsIntroduction': 'Follow the instructions below to create or update a template:';
     readonly 'templateEditorToolbar.addToCatalogDialogContent.stepsListItems': 'Save the template files in a local directory\nCreate a pull request to a new or existing git repository\nIf the template already exists, the changes will be reflected in the software catalog once the pull request gets merged\nBut if you are creating a new template, follow the documentation linked below to register the new template repository in software catalog';
-    readonly 'templateEditorToolbar.addToCatalogDialogActions.documentationButton': 'Go to the documentation';
     readonly 'templateEditorToolbar.addToCatalogDialogActions.documentationUrl': 'https://backstage.io/docs/features/software-templates/adding-templates/';
+    readonly 'templateEditorToolbar.addToCatalogDialogActions.documentationButton': 'Go to the documentation';
+    readonly 'templateEditorToolbarFileMenu.button': 'File';
     readonly 'templateEditorToolbarFileMenu.options.openDirectory': 'Open template directory';
     readonly 'templateEditorToolbarFileMenu.options.createDirectory': 'Create template directory';
     readonly 'templateEditorToolbarFileMenu.options.closeEditor': 'Close template editor';
-    readonly 'templateEditorToolbarFileMenu.button': 'File';
     readonly 'templateEditorToolbarTemplatesMenu.button': 'Templates';
   }
 >;

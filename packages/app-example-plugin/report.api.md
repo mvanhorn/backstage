@@ -27,8 +27,8 @@ const examplePlugin: OverridableFrontendPlugin<
         title: string | undefined;
       };
       configInput: {
-        path?: string | undefined;
         title?: string | undefined;
+        path?: string | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>

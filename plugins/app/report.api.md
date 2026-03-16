@@ -775,14 +775,14 @@ const appPlugin: OverridableFrontendPlugin<
         transientTimeoutMs: number;
         anchorOrigin: {
           horizontal: 'center' | 'left' | 'right';
-          vertical: 'bottom' | 'top';
+          vertical: 'top' | 'bottom';
         };
       };
       configInput: {
         anchorOrigin?:
           | {
               horizontal?: 'center' | 'left' | 'right' | undefined;
-              vertical?: 'bottom' | 'top' | undefined;
+              vertical?: 'top' | 'bottom' | undefined;
             }
           | undefined;
         transientTimeoutMs?: number | undefined;

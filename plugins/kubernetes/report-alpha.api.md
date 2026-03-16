@@ -102,10 +102,10 @@ const _default: OverridableFrontendPlugin<
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        path?: string | undefined;
         title?: string | undefined;
-        icon?: string | undefined;
+        path?: string | undefined;
         group?: string | false | undefined;
+        icon?: string | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>
@@ -168,8 +168,8 @@ const _default: OverridableFrontendPlugin<
         title: string | undefined;
       };
       configInput: {
-        path?: string | undefined;
         title?: string | undefined;
+        path?: string | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>

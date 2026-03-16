@@ -217,8 +217,8 @@ export const createFilesystemReadDirAction: () => TemplateAction<
 export const createFilesystemRenameAction: () => TemplateAction<
   {
     files: {
-      to: string;
       from: string;
+      to: string;
       overwrite?: boolean | undefined;
     }[];
   },

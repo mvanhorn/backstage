@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ApiRef, createApiRef } from '../system';
+import { createApiRef } from '../system';
 import { Observable } from '@backstage/types';
 
 /** @public */
@@ -31,8 +31,7 @@ export type AppLanguageApi = {
 /**
  * @public
  */
-export const appLanguageApiRef: ApiRef<AppLanguageApi> =
-  createApiRef<AppLanguageApi>().with({
-    id: 'core.applanguage',
-    pluginId: 'app',
-  });
+export const appLanguageApiRef = createApiRef<AppLanguageApi>().with({
+  id: 'core.applanguage',
+  pluginId: 'app',
+});

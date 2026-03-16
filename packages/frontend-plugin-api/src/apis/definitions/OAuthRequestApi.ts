@@ -15,7 +15,7 @@
  */
 
 import { Observable } from '@backstage/types';
-import { ApiRef, createApiRef } from '../system';
+import { createApiRef } from '../system';
 import { AuthProviderInfo } from './auth';
 
 /**
@@ -126,8 +126,7 @@ export type OAuthRequestApi = {
  *
  * @public
  */
-export const oauthRequestApiRef: ApiRef<OAuthRequestApi> =
-  createApiRef<OAuthRequestApi>().with({
-    id: 'core.oauthrequest',
-    pluginId: 'app',
-  });
+export const oauthRequestApiRef = createApiRef<OAuthRequestApi>().with({
+  id: 'core.oauthrequest',
+  pluginId: 'app',
+});

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ApiRef, createApiRef } from '../system';
+import { createApiRef } from '../system';
 import { AnalyticsContextValue } from '../../analytics/types';
 
 /**
@@ -151,8 +151,7 @@ export type AnalyticsApi = {
  *
  * @public
  */
-export const analyticsApiRef: ApiRef<AnalyticsApi> =
-  createApiRef<AnalyticsApi>().with({
-    id: 'core.analytics',
-    pluginId: 'app',
-  });
+export const analyticsApiRef = createApiRef<AnalyticsApi>().with({
+  id: 'core.analytics',
+  pluginId: 'app',
+});

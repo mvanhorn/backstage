@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ApiRef, createApiRef } from '../system';
+import { createApiRef } from '../system';
 import { JsonValue, Observable } from '@backstage/types';
 
 /**
@@ -105,8 +105,7 @@ export interface StorageApi {
  *
  * @public
  */
-export const storageApiRef: ApiRef<StorageApi> =
-  createApiRef<StorageApi>().with({
-    id: 'core.storage',
-    pluginId: 'app',
-  });
+export const storageApiRef = createApiRef<StorageApi>().with({
+  id: 'core.storage',
+  pluginId: 'app',
+});

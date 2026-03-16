@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { createApiRef, ApiRef } from '../system';
+import { createApiRef } from '../system';
 import { Observable } from '@backstage/types';
 
 /**
@@ -51,7 +51,7 @@ export type AlertApi = {
  *
  * @public
  */
-export const alertApiRef: ApiRef<AlertApi> = createApiRef<AlertApi>().with({
+export const alertApiRef = createApiRef<AlertApi>().with({
   id: 'core.alert',
   pluginId: 'app',
 });

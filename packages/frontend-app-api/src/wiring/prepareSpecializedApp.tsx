@@ -17,23 +17,18 @@
 import { ConfigReader } from '@backstage/config';
 import { isError } from '@backstage/errors';
 import {
-  ApiBlueprint,
   AnyApiFactory,
   ApiHolder,
   AppTree,
   ConfigApi,
   coreExtensionData,
   AppNode,
-  AppNodeInstance,
-  ExtensionDataRef,
   ExtensionFactoryMiddleware,
   FrontendFeature,
-  featureFlagsApiRef,
   IdentityApi,
   identityApiRef,
   createExtensionDataRef,
 } from '@backstage/frontend-plugin-api';
-import { FilterPredicate } from '@backstage/filter-predicates';
 import {
   createExtensionDataContainer,
   OpaqueFrontendPlugin,
@@ -50,17 +45,11 @@ import {
 import { CreateAppRouteBinder } from '../routing';
 import { resolveRouteBindings } from '../routing/resolveRouteBindings';
 import { collectRouteIds } from '../routing/collectRouteIds';
-// eslint-disable-next-line @backstage/no-relative-monorepo-imports
-import {
-  toInternalFrontendModule,
-  isInternalFrontendModule,
-} from '../../../frontend-plugin-api/src/wiring/createFrontendModule';
 import { getBasePath } from '../routing/getBasePath';
 import { Root } from '../extensions/Root';
 import { resolveAppTree } from '../tree/resolveAppTree';
 import { resolveAppNodeSpecs } from '../tree/resolveAppNodeSpecs';
 import { readAppExtensionsConfig } from '../tree/readAppExtensionsConfig';
-import { instantiateAppNodeSubtree } from '../tree/instantiateAppNodeTree';
 import {
   createPluginInfoAttacher,
   FrontendPluginInfoResolver,
@@ -71,10 +60,8 @@ import {
   ErrorCollector,
 } from './createErrorCollector';
 import {
-  AppTreeApiProxy,
   createPhaseApis,
   instantiateAndInitializePhaseTree,
-  RouteResolutionApiProxy,
   setIdentityApiTarget,
 } from './phaseApis';
 import {
@@ -83,10 +70,22 @@ import {
   EMPTY_PREDICATE_CONTEXT,
   type ExtensionPredicateContext,
 } from './predicates';
+import { FrontendApiRegistry } from './FrontendApiRegistry';
 import {
-  FrontendApiRegistry,
-  FrontendApiResolver,
-} from './FrontendApiRegistry';
+  ApiFactoryEntry,
+  collectApiFactoryEntries,
+  registerFeatureFlagDeclarationsInHolder,
+  syncFinalApiFactories,
+  wrapFeatureFlagApiFactory,
+} from './apiFactories';
+import {
+  attachThrowingFinalizationChild,
+  BootstrapClassification,
+  classifyBootstrapTree,
+  clearFinalizationBoundaryInstances,
+  createBootstrapApp,
+  prepareFinalizedTree,
+} from './treeLifecycle';
 
 function deduplicateFeatures(
   allFeatures: FrontendFeature[],
@@ -323,6 +322,8 @@ export function prepareSpecializedApp(
     ? OpaqueSpecializedAppSessionState.toInternal(providedSessionState)
     : undefined;
   const providedApis = providedSessionData?.apis;
+  // Bootstrap only renders the parts of the tree that are known to be safe
+  // before predicate context and sign-in have been resolved.
   const bootstrapClassification = classifyBootstrapTree({
     tree,
     collector,
@@ -339,8 +340,12 @@ export function prepareSpecializedApp(
   >();
 
   if (providedApis) {
+    // Reused session state already carries a fully prepared API holder, so the
+    // bootstrap path only needs to register feature flag declarations on top.
     registerFeatureFlagDeclarationsInHolder(providedApis, features);
   } else {
+    // Bootstrap materializes only the immediately visible API factories. Any
+    // predicate-gated API roots are revisited during finalization.
     collectApiFactoryEntries({
       apiNodes: (tree.root.edges.attachments.get('apis') ?? []).filter(
         apiNode => !bootstrapClassification.deferredApiRoots.has(apiNode),
@@ -371,8 +376,6 @@ export function prepareSpecializedApp(
   let signInRuntime: SignInRuntime | undefined;
   let finalized: FinalizedSpecializedApp | undefined;
   let bootstrapApp: BootstrapSpecializedApp | undefined;
-  let finalizationState: FinalizationState | undefined;
-  let finalizationMode: FinalizationMode | undefined;
 
   function updateIdentityApiTarget(identityApi?: IdentityApi) {
     if (!identityApi) {
@@ -389,6 +392,8 @@ export function prepareSpecializedApp(
   function createSessionState(predicateContext: ExtensionPredicateContext) {
     const identityApi =
       signInRuntime?.readyIdentityApi ?? providedSessionData?.identityApi;
+    // As soon as a real identity is available we swap the phase proxy over so
+    // the finalized tree observes the same API instance.
     updateIdentityApiTarget(identityApi);
     const sessionState = OpaqueSpecializedAppSessionState.createInstance('v1', {
       apis: phase.apis,
@@ -398,10 +403,12 @@ export function prepareSpecializedApp(
     return sessionState;
   }
 
-  function getImmediateSessionState() {
+  function getSynchronousSessionState() {
     if (providedSessionState) {
       return providedSessionState;
     }
+    // The direct finalize() path is intentionally synchronous. If sign-in is
+    // still pending we refuse to guess and force the caller to wait.
     if (signInRuntime?.requiresSignIn) {
       return undefined;
     }
@@ -414,7 +421,7 @@ export function prepareSpecializedApp(
     return createSessionState(predicateContext);
   }
 
-  function loadSessionState() {
+  function loadAsyncSessionState() {
     if (providedSessionState) {
       return Promise.resolve(providedSessionState);
     }
@@ -426,8 +433,10 @@ export function prepareSpecializedApp(
       );
     }
 
+    // For apps without sign-in we can sometimes finalize immediately from the
+    // already available predicate context, skipping the async loader.
     if (!signInRuntime?.requiresSignIn) {
-      const immediateSessionState = getImmediateSessionState();
+      const immediateSessionState = getSynchronousSessionState();
       if (immediateSessionState) {
         return Promise.resolve(immediateSessionState);
       }
@@ -436,102 +445,55 @@ export function prepareSpecializedApp(
     return predicateContextLoader.load().then(createSessionState);
   }
 
-  function getFinalizationState(): FinalizationState {
-    if (finalizationState) {
-      return finalizationState;
-    }
-
-    let resolve: ((app: FinalizedSpecializedApp) => void) | undefined;
-    let reject: ((error: unknown) => void) | undefined;
-    const promise = new Promise<FinalizedSpecializedApp>((res, rej) => {
-      resolve = res;
-      reject = rej;
+  function finalizeWithSessionState(
+    finalizedSessionState: SpecializedAppSessionState,
+  ) {
+    return finalizeFromSessionState({
+      finalized,
+      finalizedSessionState,
+      tree,
+      collector,
+      phase,
+      extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
+      routeRefsById,
+      appBasePath,
+      providedApis,
+      features,
+      appApiRegistry,
+      bootstrapClassification,
+      bootstrapApiFactoryEntries,
+      bootstrapMissingApiAccesses,
     });
-    if (!resolve || !reject) {
-      throw new Error('Failed to create finalization state');
-    }
-
-    finalizationState = {
-      started: false,
-      promise,
-      resolve,
-      reject,
-    };
-    return finalizationState;
   }
 
-  function beginFinalization(
-    loader: () => Promise<SpecializedAppSessionState>,
-  ): Promise<FinalizedSpecializedApp> {
-    if (finalized) {
-      return Promise.resolve(finalized);
-    }
-    const finalization = getFinalizationState();
-    if (finalization.started) {
-      return finalization.promise;
-    }
-    finalization.started = true;
-
-    let finalizedSessionState: SpecializedAppSessionState | undefined;
-    loader()
-      .then(sessionState => {
-        finalizedSessionState = sessionState;
-        const finalizedApp = finalizeFromSessionState({
-          finalized,
-          finalizedSessionState: sessionState,
-          tree,
-          collector,
-          phase,
-          extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
-          routeRefsById,
-          appBasePath,
-          providedApis,
-          features,
-          appApiRegistry,
-          bootstrapClassification,
-          bootstrapApiFactoryEntries,
-          bootstrapMissingApiAccesses,
-        });
-        finalized = finalizedApp;
-        finalization.resolve(finalizedApp);
-      })
-      .catch(error => {
-        try {
-          const bootstrapFailure = isError(error)
-            ? error
-            : new Error(String(error));
-          const finalizedApp = finalizeFromBootstrapError({
-            finalized,
-            error: bootstrapFailure,
-            finalizedSessionState,
-            tree,
-            collector,
-            phase,
-            extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
-            routeRefsById,
-            signInRuntime,
-            providedSessionData,
-          });
-          finalized = finalizedApp;
-          finalization.resolve(finalizedApp);
-        } catch (finalizationError) {
-          finalizationState = undefined;
-          finalization.reject(finalizationError);
-        }
-      });
-
-    return finalization.promise;
+  function finalizeWithBootstrapError(
+    error: Error,
+    finalizedSessionState?: SpecializedAppSessionState,
+  ) {
+    return finalizeFromBootstrapError({
+      finalized,
+      error,
+      finalizedSessionState,
+      tree,
+      collector,
+      phase,
+      extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
+      routeRefsById,
+      signInRuntime,
+      providedSessionData,
+    });
   }
 
-  function selectFinalizationMode(mode: FinalizationMode) {
-    if (finalizationMode && finalizationMode !== mode) {
-      throw new Error(
-        `prepareSpecializedApp only supports using either onFinalized() or finalize(), not both`,
-      );
-    }
-
-    finalizationMode = mode;
-  }
+  const finalization = createFinalizationController({
+    getFinalized() {
+      return finalized;
+    },
+    setFinalized(finalizedApp) {
+      finalized = finalizedApp;
+    },
+    finalizeFromSessionState: finalizeWithSessionState,
+    finalizeFromBootstrapError: finalizeWithBootstrapError,
+  });
 
   function getBootstrapApp() {
     if (bootstrapApp) {
@@ -545,8 +507,10 @@ export function prepareSpecializedApp(
       phase.identityApiProxy.setTargetHandlers({
         onTargetSet(identityApi) {
           runtime.readyIdentityApi = identityApi;
-          if (finalizationMode === 'onFinalized') {
-            beginFinalization(loadSessionState);
+          // Sign-in completion only auto-starts finalization for onFinalized().
+          // The direct finalize() path stays explicit and synchronous.
+          if (finalization.getMode() === 'onFinalized') {
+            finalization.start(loadAsyncSessionState);
           }
         },
       });
@@ -570,6 +534,11 @@ export function prepareSpecializedApp(
           apiRefId,
         });
       },
+      hasSignInPage(signInPageNode) {
+        return Boolean(
+          signInPageNode?.instance?.getData(signInPageComponentDataRef),
+        );
+      },
     });
     if (!result.requiresSignIn) {
       phase.identityApiProxy.clearTargetHandlers();
@@ -585,7 +554,9 @@ export function prepareSpecializedApp(
   return {
     getBootstrapApp,
     onFinalized(callback) {
-      selectFinalizationMode('onFinalized');
+      finalization.selectMode('onFinalized');
+      // Subscribing to finalization also ensures the bootstrap tree exists,
+      // because sign-in may need to capture identity before finalization starts.
       getBootstrapApp();
 
       let subscribed = true;
@@ -602,10 +573,12 @@ export function prepareSpecializedApp(
         };
       }
 
+      // If sign-in is still in progress we wait for the shared promise created
+      // by the sign-in callback. Otherwise we can start finalization right away.
       const finalizedAppPromise =
         signInRuntime?.requiresSignIn && !signInRuntime.readyIdentityApi
-          ? getFinalizationState().promise
-          : beginFinalization(loadSessionState);
+          ? finalization.getPromise()
+          : finalization.start(loadAsyncSessionState);
       finalizedAppPromise
         .then(finalizedApp => {
           if (subscribed) {
@@ -619,19 +592,24 @@ export function prepareSpecializedApp(
       };
     },
     finalize(finalizeOptions?: { sessionState?: SpecializedAppSessionState }) {
-      selectFinalizationMode('finalize');
+      finalization.selectMode('finalize');
       if (finalized) {
         return finalized;
       }
       if (!finalizeOptions?.sessionState) {
+        // finalize() still depends on bootstrap classification and sign-in
+        // discovery, so we make sure the bootstrap tree has been prepared first.
         getBootstrapApp();
       }
 
+      // Direct finalization never waits for async session preparation. Callers
+      // must either supply sessionState or invoke finalize() only when the
+      // predicate context is already available synchronously.
       const finalizedSessionState =
         finalizeOptions?.sessionState ??
         (signInRuntime?.requiresSignIn
           ? undefined
-          : getImmediateSessionState());
+          : getSynchronousSessionState());
       if (!finalizedSessionState) {
         if (signInRuntime?.requiresSignIn) {
           throw new Error(
@@ -643,96 +621,19 @@ export function prepareSpecializedApp(
         );
       }
 
-      const result = finalizeFromSessionState({
-        finalized,
-        finalizedSessionState,
-        tree,
-        collector,
-        phase,
-        extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
-        routeRefsById,
-        appBasePath,
-        providedApis,
-        features,
-        appApiRegistry,
-        bootstrapClassification,
-        bootstrapApiFactoryEntries,
-        bootstrapMissingApiAccesses,
-      });
-      finalized = result;
+      finalized = finalizeWithSessionState(finalizedSessionState);
       return finalized;
     },
   };
 }
 
-function registerFeatureFlagDeclarations(
-  featureFlagApi: typeof featureFlagsApiRef.T,
-  features: FrontendFeature[],
-) {
-  for (const feature of features) {
-    if (OpaqueFrontendPlugin.isType(feature)) {
-      OpaqueFrontendPlugin.toInternal(feature).featureFlags.forEach(flag =>
-        featureFlagApi.registerFlag({
-          name: flag.name,
-          description: flag.description,
-          pluginId: feature.id,
-        }),
-      );
-    }
-    if (isInternalFrontendModule(feature)) {
-      toInternalFrontendModule(feature).featureFlags.forEach(flag =>
-        featureFlagApi.registerFlag({
-          name: flag.name,
-          description: flag.description,
-          pluginId: feature.pluginId,
-        }),
-      );
-    }
-  }
-}
-
-function registerFeatureFlagDeclarationsInHolder(
-  apis: ApiHolder,
-  features: FrontendFeature[],
-) {
-  const featureFlagApi = apis.get(featureFlagsApiRef);
-  if (featureFlagApi) {
-    registerFeatureFlagDeclarations(featureFlagApi, features);
-  }
-}
-
-function wrapFeatureFlagApiFactory(
-  factory: AnyApiFactory,
-  features: FrontendFeature[],
-) {
-  if (factory.api.id !== featureFlagsApiRef.id) {
-    return factory;
-  }
-
-  return {
-    ...factory,
-    factory(deps) {
-      const featureFlagApi = factory.factory(
-        deps,
-      ) as typeof featureFlagsApiRef.T;
-      registerFeatureFlagDeclarations(featureFlagApi, features);
-      return featureFlagApi;
-    },
-  } as AnyApiFactory;
-}
-
-type ApiFactoryEntry = {
-  node: AppNode;
-  pluginId: string;
-  factory: AnyApiFactory;
-};
-
-type BootstrapClassification = {
-  deferredApiRoots: Set<AppNode>;
-  deferredElementRoots: Set<AppNode>;
-  deferredRoots: Set<AppNode>;
-};
-
+/**
+ * Materializes the fully finalized app tree from a prepared session state.
+ *
+ * This is responsible for switching the identity proxy to the resolved target,
+ * synchronizing any deferred API factories, and re-instantiating the parts of
+ * the tree that are only valid once predicate context is available.
+ */
 function finalizeFromSessionState(options: {
   finalized?: FinalizedSpecializedApp;
   finalizedSessionState: SpecializedAppSessionState;
@@ -757,6 +658,8 @@ function finalizeFromSessionState(options: {
     options.finalizedSessionState,
   );
   if (sessionStateData.identityApi) {
+    // Finalization retargets the identity proxy before any additional nodes are
+    // instantiated so the full tree observes the captured identity immediately.
     setIdentityApiTarget({
       identityApiProxy: options.phase.identityApiProxy,
       identityApi: sessionStateData.identityApi,
@@ -764,6 +667,8 @@ function finalizeFromSessionState(options: {
     });
   }
   if (!options.providedApis) {
+    // Deferred API roots are synchronized at finalization time, but bootstrap-
+    // materialized APIs stay frozen if they were already observed earlier.
     syncFinalApiFactories({
       deferredApiNodes: options.bootstrapClassification.deferredApiRoots,
       appApiRegistry: options.appApiRegistry,
@@ -779,6 +684,8 @@ function finalizeFromSessionState(options: {
   prepareFinalizedTree({
     tree: options.tree,
   });
+  // Finalization re-instantiates the boundary subtree so predicate-gated app
+  // content can be re-evaluated without disturbing preserved bootstrap nodes.
   clearFinalizationBoundaryInstances(options.tree);
   instantiateAndInitializePhaseTree({
     tree: options.tree,
@@ -806,6 +713,13 @@ function finalizeFromSessionState(options: {
   };
 }
 
+/**
+ * Builds a finalized app that rethrows a bootstrap-time failure through the
+ * normal app root boundary.
+ *
+ * This keeps the error handling path aligned with normal finalization while
+ * preserving any session state that was already resolved before the failure.
+ */
 function finalizeFromBootstrapError(options: {
   finalized?: FinalizedSpecializedApp;
   error: Error;
@@ -822,6 +736,8 @@ function finalizeFromBootstrapError(options: {
     return options.finalized;
   }
 
+  // If finalization fails after session state was already prepared, keep using
+  // it so the error app reflects the same identity and API view.
   const finalizedSessionState =
     options.finalizedSessionState ??
     OpaqueSpecializedAppSessionState.createInstance('v1', {
@@ -836,6 +752,8 @@ function finalizeFromBootstrapError(options: {
     tree: options.tree,
   });
   clearFinalizationBoundaryInstances(options.tree);
+  // The final app reports bootstrap failures through app/root.children so the
+  // normal app root boundary renders the error state for us.
   attachThrowingFinalizationChild(options.tree, options.error);
   instantiateAndInitializePhaseTree({
     tree: options.tree,
@@ -861,426 +779,119 @@ function finalizeFromBootstrapError(options: {
   };
 }
 
-function createBootstrapApp(options: {
-  tree: AppTree;
-  apis: ApiHolder;
-  collector: ErrorCollector;
-  routeRefsById: ReturnType<typeof collectRouteIds>;
-  routeResolutionApi: RouteResolutionApiProxy;
-  appTreeApi: AppTreeApiProxy;
-  extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
-  disableSignIn?: boolean;
-  skipBootstrapChild?(ctx: {
-    node: AppNode;
-    input: string;
-    child: AppNode;
-  }): boolean;
-  onMissingApi?(ctx: { node: AppNode; apiRefId: string }): void;
-}): {
-  bootstrapApp: BootstrapSpecializedApp;
-  requiresSignIn: boolean;
-} {
-  const signInPageNode = getAppRootNode(options.tree)?.edges.attachments.get(
-    'signInPage',
-  )?.[0];
-
-  instantiateAndInitializePhaseTree({
-    tree: options.tree,
-    apis: options.apis,
-    collector: options.collector,
-    extensionFactoryMiddleware: options.extensionFactoryMiddleware,
-    routeResolutionApi: options.routeResolutionApi,
-    appTreeApi: options.appTreeApi,
-    routeRefsById: options.routeRefsById,
-    stopAtAttachment: ({ node, input }) =>
-      isSessionBoundaryAttachment(node, input),
-    skipChild: options.skipBootstrapChild,
-    onMissingApi: options.onMissingApi,
-  });
-
-  const element = options.tree.root.instance?.getData(
-    coreExtensionData.reactElement,
-  );
-  if (!element) {
-    throw new Error('Expected bootstrap tree to expose a root element');
-  }
-
-  return {
-    bootstrapApp: {
-      element,
-      tree: options.tree,
-    },
-    requiresSignIn:
-      !options.disableSignIn &&
-      Boolean(signInPageNode?.instance?.getData(signInPageComponentDataRef)),
-  };
-}
-
-function prepareFinalizedTree(options: { tree: AppTree }) {
-  for (const appRootNode of getFinalizationBoundaryNodes(options.tree)) {
-    const attachments = appRootNode.edges.attachments as Map<string, AppNode[]>;
-    attachments.delete('signInPage');
-  }
-}
-
-function clearFinalizationBoundaryInstances(tree: AppTree) {
-  clearNodeInstance(tree.root);
-
-  const visited = new Set<AppNode>();
-  function visit(node: AppNode) {
-    if (visited.has(node)) {
-      return;
-    }
-    visited.add(node);
-    clearNodeInstance(node);
-
-    for (const [input, children] of node.edges.attachments) {
-      if (node.spec.id === 'app/root' && input === 'elements') {
-        continue;
-      }
-
-      for (const child of children) {
-        visit(child);
-      }
-    }
-  }
-
-  for (const appRootNode of getFinalizationBoundaryNodes(tree)) {
-    visit(appRootNode);
-  }
-}
-
-function getAppRootNode(tree: AppTree) {
-  return tree.nodes.get('app/root');
-}
-
-function getFinalizationBoundaryNodes(tree: AppTree): AppNode[] {
-  const nodes = new Set<AppNode>();
-  const appRootNode = getAppRootNode(tree);
-  if (appRootNode) {
-    nodes.add(appRootNode);
-  }
-  const attachedAppRootNode = tree.root.edges.attachments.get('app')?.[0];
-  if (attachedAppRootNode) {
-    nodes.add(attachedAppRootNode);
-  }
-  return Array.from(nodes);
-}
-
-function isSessionBoundaryAttachment(node: AppNode, input: string) {
-  return node.spec.id === 'app/root' && input === 'children';
-}
-
-function attachThrowingFinalizationChild(tree: AppTree, error: Error) {
-  const bootstrapChildNode =
-    getAppRootNode(tree)?.edges.attachments.get('children')?.[0];
-  if (!bootstrapChildNode) {
-    throw error;
-  }
-
-  function ThrowBootstrapError(): never {
-    throw error;
-  }
-
-  (bootstrapChildNode as AppNode & { instance?: AppNodeInstance }).instance = {
-    getDataRefs() {
-      return [coreExtensionData.reactElement].values();
-    },
-    getData<TValue>(dataRef: ExtensionDataRef<TValue>) {
-      if (dataRef.id === coreExtensionData.reactElement.id) {
-        return (<ThrowBootstrapError />) as TValue;
-      }
-      return undefined;
-    },
-  };
-}
-
-function clearNodeInstance(node: AppNode) {
-  (node as AppNode & { instance?: AppNodeInstance }).instance = undefined;
-}
-
-const EMPTY_API_HOLDER: ApiHolder = {
-  get() {
-    return undefined;
-  },
-};
-
-function collectApiFactoryEntries(options: {
-  apiNodes: Iterable<AppNode>;
-  collector: ErrorCollector;
-  predicateContext?: ExtensionPredicateContext;
-  entries?: Map<string, ApiFactoryEntry>;
-}): Map<string, ApiFactoryEntry> {
-  const factoriesById = options.entries ?? new Map<string, ApiFactoryEntry>();
-  for (const apiNode of options.apiNodes) {
-    const detachedApiNode = instantiateAppNodeSubtree({
-      rootNode: apiNode,
-      apis: EMPTY_API_HOLDER,
-      collector: options.collector,
-      predicateContext: options.predicateContext,
-      writeNodeInstances: false,
-      reuseExistingInstances: false,
-    });
-    if (!detachedApiNode) {
-      continue;
-    }
-    const apiFactory = detachedApiNode.instance?.getData(
-      ApiBlueprint.dataRefs.factory,
-    );
-    if (apiFactory) {
-      const apiRefId = apiFactory.api.id;
-      const ownerId = getApiOwnerId(apiRefId);
-      const pluginId = apiNode.spec.plugin.pluginId ?? 'app';
-      const existingFactory = factoriesById.get(apiRefId);
-
-      // This allows modules to override factories provided by the plugin, but
-      // it rejects API overrides from other plugins. In the event of a
-      // conflict, the owning plugin is attempted to be inferred from the API
-      // reference ID.
-      if (existingFactory && existingFactory.pluginId !== pluginId) {
-        const shouldReplace =
-          ownerId === pluginId && existingFactory.pluginId !== ownerId;
-        const acceptedPluginId = shouldReplace
-          ? pluginId
-          : existingFactory.pluginId;
-        const rejectedPluginId = shouldReplace
-          ? existingFactory.pluginId
-          : pluginId;
-
-        options.collector.report({
-          code: 'API_FACTORY_CONFLICT',
-          message: `API '${apiRefId}' is already provided by plugin '${acceptedPluginId}', cannot also be provided by '${rejectedPluginId}'.`,
-          context: {
-            node: apiNode,
-            apiRefId,
-            pluginId: rejectedPluginId,
-            existingPluginId: acceptedPluginId,
-          },
-        });
-        if (shouldReplace) {
-          factoriesById.set(apiRefId, {
-            pluginId,
-            node: apiNode,
-            factory: apiFactory,
-          });
-        }
-        continue;
-      }
-
-      factoriesById.set(apiRefId, {
-        pluginId,
-        node: apiNode,
-        factory: apiFactory,
-      });
-    } else {
-      options.collector.report({
-        code: 'API_EXTENSION_INVALID',
-        message: `API extension '${apiNode.spec.id}' did not output an API factory`,
-        context: {
-          node: apiNode,
-        },
-      });
-    }
-  }
-
-  return factoriesById;
-}
-
-function syncFinalApiFactories(options: {
-  deferredApiNodes: Iterable<AppNode>;
-  appApiRegistry: FrontendApiRegistry;
-  apiResolver: FrontendApiResolver;
-  collector: ErrorCollector;
-  features: FrontendFeature[];
-  bootstrapApiFactoryEntries: ReadonlyMap<string, ApiFactoryEntry>;
-  bootstrapMissingApiAccesses: Map<string, { node: AppNode; apiRefId: string }>;
-  predicateContext: ExtensionPredicateContext;
+/**
+ * Owns the callback-driven finalization lifecycle for a prepared app.
+ *
+ * The controller enforces the selected finalization mode, memoizes the shared
+ * async finalization promise for `onFinalized()` subscribers, and funnels both
+ * successful and failing async finalization through the same resolution path.
+ */
+function createFinalizationController(options: {
+  getFinalized(): FinalizedSpecializedApp | undefined;
+  setFinalized(finalizedApp: FinalizedSpecializedApp): void;
+  finalizeFromSessionState(
+    finalizedSessionState: SpecializedAppSessionState,
+  ): FinalizedSpecializedApp;
+  finalizeFromBootstrapError(
+    error: Error,
+    finalizedSessionState?: SpecializedAppSessionState,
+  ): FinalizedSpecializedApp;
 }) {
-  const finalApiEntries = collectApiFactoryEntries({
-    apiNodes: options.deferredApiNodes,
-    collector: options.collector,
-    predicateContext: options.predicateContext,
-    entries: new Map(options.bootstrapApiFactoryEntries),
-  });
-  const changedEntries = Array.from(finalApiEntries.values()).filter(entry => {
-    const bootstrapEntry = options.bootstrapApiFactoryEntries.get(
-      entry.factory.api.id,
-    );
-    if (!bootstrapEntry) {
-      return true;
-    }
-    if (bootstrapEntry.factory === entry.factory) {
-      return false;
-    }
-    if (options.apiResolver.isMaterialized(entry.factory.api.id)) {
-      options.collector.report({
-        code: 'EXTENSION_BOOTSTRAP_API_OVERRIDE_IGNORED',
-        message:
-          `Extension '${entry.node.spec.id}' tried to override API ` +
-          `'${entry.factory.api.id}' after it had already been materialized during bootstrap. ` +
-          'The bootstrap implementation was kept and the deferred override was ignored.',
-        context: {
-          node: entry.node,
-          apiRefId: entry.factory.api.id,
-          bootstrapNode: bootstrapEntry.node,
-          pluginId: entry.pluginId,
-          bootstrapPluginId: bootstrapEntry.pluginId,
-        },
-      });
-      return false;
-    }
-    return true;
-  });
-  const changedFactories = changedEntries.map(entry =>
-    wrapFeatureFlagApiFactory(entry.factory, options.features),
-  );
-  options.appApiRegistry.setAll(changedFactories);
-  options.apiResolver.invalidate(
-    changedFactories.map(factory => factory.api.id),
-  );
-  for (const bootstrapAccess of options.bootstrapMissingApiAccesses.values()) {
-    if (
-      options.bootstrapApiFactoryEntries.has(bootstrapAccess.apiRefId) ||
-      !finalApiEntries.has(bootstrapAccess.apiRefId)
-    ) {
-      continue;
+  let finalizationState: FinalizationState | undefined;
+  let finalizationMode: FinalizationMode | undefined;
+
+  function getState(): FinalizationState {
+    if (finalizationState) {
+      return finalizationState;
     }
 
-    options.collector.report({
-      code: 'EXTENSION_BOOTSTRAP_API_UNAVAILABLE',
-      message:
-        `Extension '${bootstrapAccess.node.spec.id}' tried to access API ` +
-        `'${bootstrapAccess.apiRefId}' during bootstrap before it was available. ` +
-        'That API became available during finalization, so bootstrap-visible extensions must not depend on deferred APIs.',
-      context: {
-        node: bootstrapAccess.node,
-        apiRefId: bootstrapAccess.apiRefId,
-      },
+    // onFinalized() subscribers all fan into the same promise so that the full
+    // finalization flow only ever runs once.
+    let resolve: ((app: FinalizedSpecializedApp) => void) | undefined;
+    let reject: ((error: unknown) => void) | undefined;
+    const promise = new Promise<FinalizedSpecializedApp>((res, rej) => {
+      resolve = res;
+      reject = rej;
     });
-  }
-}
-
-function collectBootstrapVisibleNodes(
-  tree: AppTree,
-  options?: { deferredRoots?: Set<AppNode> },
-) {
-  const visibleNodes = new Set<AppNode>();
-
-  function visit(node: AppNode) {
-    if (visibleNodes.has(node)) {
-      return;
-    }
-    visibleNodes.add(node);
-
-    for (const [input, children] of node.edges.attachments) {
-      if (isSessionBoundaryAttachment(node, input)) {
-        continue;
-      }
-
-      for (const child of children) {
-        if (options?.deferredRoots?.has(child)) {
-          continue;
-        }
-        visit(child);
-      }
-    }
-  }
-
-  visit(tree.root);
-
-  return visibleNodes;
-}
-
-function classifyBootstrapTree(options: {
-  tree: AppTree;
-  collector: ErrorCollector;
-}): BootstrapClassification {
-  const apiNodes = options.tree.root.edges.attachments.get('apis') ?? [];
-  const deferredApiRoots = new Set(
-    apiNodes.filter(apiNode => subtreeContainsPredicate(apiNode)),
-  );
-  const appRootElementNodes =
-    getAppRootNode(options.tree)?.edges.attachments.get('elements') ?? [];
-  const deferredElementRoots = new Set(
-    appRootElementNodes.filter(elementNode =>
-      subtreeContainsPredicate(elementNode),
-    ),
-  );
-  const deferredRoots = new Set<AppNode>([
-    ...deferredApiRoots,
-    ...deferredElementRoots,
-  ]);
-  const bootstrapNodes = collectBootstrapVisibleNodes(options.tree, {
-    deferredRoots,
-  });
-
-  for (const node of bootstrapNodes) {
-    if (node.spec.if === undefined) {
-      continue;
+    if (!resolve || !reject) {
+      throw new Error('Failed to create finalization state');
     }
 
-    options.collector.report({
-      code: 'EXTENSION_BOOTSTRAP_PREDICATE_IGNORED',
-      message:
-        `Extension '${node.spec.id}' uses 'if' during bootstrap, so the predicate was ignored. ` +
-        "Move it behind 'app/root.children', onto a deferred 'app/root.elements' subtree, or into an API subtree.",
-      context: {
-        node,
-      },
-    });
-    (node.spec as typeof node.spec & { if?: FilterPredicate }).if = undefined;
+    finalizationState = {
+      started: false,
+      promise,
+      resolve,
+      reject,
+    };
+    return finalizationState;
   }
 
   return {
-    deferredApiRoots,
-    deferredElementRoots,
-    deferredRoots,
+    getMode() {
+      return finalizationMode;
+    },
+    getPromise() {
+      return getState().promise;
+    },
+    selectMode(mode: FinalizationMode) {
+      if (finalizationMode && finalizationMode !== mode) {
+        throw new Error(
+          `prepareSpecializedApp only supports using either onFinalized() or finalize(), not both`,
+        );
+      }
+
+      // A prepared app now has one owner: either the callback-driven path or
+      // the direct finalize() path, never both.
+      finalizationMode = mode;
+    },
+    start(loader: () => Promise<SpecializedAppSessionState>) {
+      const finalized = options.getFinalized();
+      if (finalized) {
+        return Promise.resolve(finalized);
+      }
+
+      const state = getState();
+      if (state.started) {
+        return state.promise;
+      }
+      state.started = true;
+
+      // If loading finishes but final tree materialization fails, we still
+      // want to preserve the resolved session state when building the error app.
+      let finalizedSessionState: SpecializedAppSessionState | undefined;
+      loader()
+        .then(sessionState => {
+          finalizedSessionState = sessionState;
+          const finalizedApp = options.finalizeFromSessionState(sessionState);
+          options.setFinalized(finalizedApp);
+          state.resolve(finalizedApp);
+        })
+        .catch(error => {
+          try {
+            const bootstrapFailure = isError(error)
+              ? error
+              : new Error(String(error));
+            const finalizedApp = options.finalizeFromBootstrapError(
+              bootstrapFailure,
+              finalizedSessionState,
+            );
+            options.setFinalized(finalizedApp);
+            state.resolve(finalizedApp);
+          } catch (finalizationError) {
+            finalizationState = undefined;
+            state.reject(finalizationError);
+          }
+        });
+
+      return state.promise;
+    },
   };
 }
 
-function subtreeContainsPredicate(root: AppNode) {
-  const visited = new Set<AppNode>();
-
-  function visit(node: AppNode): boolean {
-    if (visited.has(node)) {
-      return false;
-    }
-    visited.add(node);
-
-    if (node.spec.if !== undefined) {
-      return true;
-    }
-
-    for (const children of node.edges.attachments.values()) {
-      for (const child of children) {
-        if (visit(child)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  return visit(root);
-}
-
-// TODO(Rugvip): It would be good if this was more explicit, but I think that
-//               might need to wait for some future update for API factories.
-function getApiOwnerId(apiRefId: string): string {
-  const [prefix, ...rest] = apiRefId.split('.');
-  if (!prefix) {
-    return apiRefId;
-  }
-  if (prefix === 'core') {
-    return 'app';
-  }
-  if (prefix === 'plugin' && rest[0]) {
-    return rest[0];
-  }
-  return prefix;
-}
-
+/**
+ * Combines one or more extension factory middlewares into a single middleware
+ * invocation chain that preserves Backstage's extension data container shape.
+ */
 function mergeExtensionFactoryMiddleware(
   middlewares?: ExtensionFactoryMiddleware | ExtensionFactoryMiddleware[],
 ): ExtensionFactoryMiddleware | undefined {

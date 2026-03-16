@@ -1712,6 +1712,7 @@ export const PageBlueprint: ExtensionBlueprint_2<{
     loader?: () => Promise<JSX_2.Element>;
     routeRef?: RouteRef;
     noHeader?: boolean;
+    showHeader?: boolean;
   };
   output:
     | ExtensionDataRef_2<string, 'core.routing.path', {}>
@@ -1797,9 +1798,13 @@ export interface PageLayoutProps {
   // (undocumented)
   noHeader?: boolean;
   // (undocumented)
+  showHeader?: boolean;
+  // (undocumented)
   tabs?: PageLayoutTab[];
   // (undocumented)
   title?: string;
+  // (undocumented)
+  titleRouteRef?: RouteRef;
 }
 
 // @public

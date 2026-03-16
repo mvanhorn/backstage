@@ -19,6 +19,9 @@ import {
   ErrorDisplay as SwappableErrorDisplay,
   PageLayout as SwappablePageLayout,
   type PageLayoutProps,
+  type RouteRef,
+  useRouteRef,
+  createRouteRef,
 } from '@backstage/frontend-plugin-api';
 import { SwappableComponentBlueprint } from '@backstage/plugin-app-react';
 import {
@@ -29,6 +32,16 @@ import {
 import { PluginHeader } from '@backstage/ui';
 import Button from '@material-ui/core/Button';
 import { useMemo } from 'react';
+
+// Stable sentinel used when no titleRouteRef is provided,
+// so useRouteRef is always called with a valid ref.
+const noopRouteRef = createRouteRef();
+
+function useTitleLink(routeRef?: RouteRef): string | undefined {
+  const resolve = useRouteRef(routeRef ?? noopRouteRef);
+  if (!routeRef) return undefined;
+  return resolve?.();
+}
 
 export const Progress = SwappableComponentBlueprint.make({
   name: 'core-progress',
@@ -74,7 +87,17 @@ export const PageLayout = SwappableComponentBlueprint.make({
     define({
       component: SwappablePageLayout,
       loader: () => (props: PageLayoutProps) => {
-        const { title, icon, noHeader, headerActions, tabs, children } = props;
+        const {
+          title,
+          icon,
+          noHeader,
+          showHeader,
+          titleRouteRef,
+          headerActions,
+          tabs,
+          children,
+        } = props;
+        const titleLink = useTitleLink(titleRouteRef);
         const tabsWithMatchStrategy = useMemo(
           () =>
             tabs?.map(tab => ({
@@ -84,22 +107,23 @@ export const PageLayout = SwappableComponentBlueprint.make({
           [tabs],
         );
 
-        if (tabsWithMatchStrategy) {
-          return (
-            <>
-              {!noHeader && (
-                <PluginHeader
-                  title={title}
-                  icon={icon}
-                  tabs={tabsWithMatchStrategy}
-                  customActions={headerActions}
-                />
-              )}
-              {children}
-            </>
-          );
-        }
-        return <>{children}</>;
+        const shouldShowHeader =
+          !noHeader && (!!tabsWithMatchStrategy || showHeader);
+
+        return (
+          <>
+            {shouldShowHeader && (
+              <PluginHeader
+                title={title}
+                titleLink={titleLink}
+                icon={icon}
+                tabs={tabsWithMatchStrategy}
+                customActions={headerActions}
+              />
+            )}
+            {children}
+          </>
+        );
       },
     }),
 });

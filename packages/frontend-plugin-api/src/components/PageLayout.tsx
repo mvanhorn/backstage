@@ -16,6 +16,7 @@
 
 import { ReactNode } from 'react';
 import { IconElement } from '../icons/types';
+import { RouteRef } from '../routing';
 import { createSwappableComponent } from './createSwappableComponent';
 
 /**
@@ -43,6 +44,8 @@ export interface PageLayoutProps {
   title?: string;
   icon?: IconElement;
   noHeader?: boolean;
+  showHeader?: boolean;
+  titleRouteRef?: RouteRef;
   headerActions?: Array<JSX.Element | null>;
   tabs?: PageLayoutTab[];
   children?: ReactNode;

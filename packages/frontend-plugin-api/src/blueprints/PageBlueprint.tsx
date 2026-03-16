@@ -68,6 +68,10 @@ export const PageBlueprint = createExtensionBlueprint({
        * Hide the default plugin page header, making the page fill up all available space.
        */
       noHeader?: boolean;
+      /**
+       * Show the plugin page header even when the page has no tabs.
+       */
+      showHeader?: boolean;
     },
     { config, node, inputs },
   ) {
@@ -75,6 +79,10 @@ export const PageBlueprint = createExtensionBlueprint({
     const icon = params.icon;
     const pluginId = node.spec.plugin.pluginId;
     const noHeader = params.noHeader ?? false;
+    const showHeader = params.showHeader ?? false;
+    const titleRouteRef =
+      (node.spec.plugin.routes as Record<string, RouteRef>)?.root ??
+      params.routeRef;
 
     yield coreExtensionData.routePath(config.path ?? params.path);
     if (params.loader) {
@@ -88,6 +96,8 @@ export const PageBlueprint = createExtensionBlueprint({
             title={title ?? node.spec.plugin.title ?? node.spec.plugin.pluginId}
             icon={icon ?? node.spec.plugin.icon}
             noHeader={noHeader}
+            showHeader={showHeader}
+            titleRouteRef={titleRouteRef}
             headerActions={headerActions}
           >
             {ExtensionBoundary.lazy(node, loader)}
@@ -120,6 +130,7 @@ export const PageBlueprint = createExtensionBlueprint({
             title={title}
             icon={icon}
             tabs={tabs}
+            titleRouteRef={titleRouteRef}
             headerActions={headerActions}
           >
             <Routes>
@@ -147,7 +158,12 @@ export const PageBlueprint = createExtensionBlueprint({
         const headerActionsApi = useApi(pluginHeaderActionsApiRef);
         const headerActions = headerActionsApi.getPluginHeaderActions(pluginId);
         return (
-          <PageLayout title={title} icon={icon} headerActions={headerActions} />
+          <PageLayout
+            title={title}
+            icon={icon}
+            titleRouteRef={titleRouteRef}
+            headerActions={headerActions}
+          />
         );
       };
       yield coreExtensionData.reactElement(<PageContent />);

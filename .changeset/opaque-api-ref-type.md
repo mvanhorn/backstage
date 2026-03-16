@@ -1,4 +1,6 @@
-## '@backstage/frontend-plugin-api': patch
+---
+'@backstage/frontend-plugin-api': patch
+---
 
 Added a builder form for `createApiRef` in the new frontend system and deprecated the direct `createApiRef({ ... })` call in favor of `createApiRef().with({ ... })`.
 

@@ -194,8 +194,8 @@ export type CreateSpecializedAppOptions = {
   features?: FrontendFeature[];
   config?: ConfigApi;
   bindRoutes?(context: { bind: CreateAppRouteBinder }): void;
-  apis?: ApiHolder;
   advanced?: {
+    apis?: ApiHolder;
     extensionFactoryMiddleware?:
       | ExtensionFactoryMiddleware_2
       | ExtensionFactoryMiddleware_2[];

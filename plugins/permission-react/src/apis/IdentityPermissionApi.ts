@@ -45,6 +45,9 @@ export class IdentityPermissionApi implements PermissionApi {
         const credentials = await identityApi.getCredentials();
         return permissionClient.authorize([...requests], credentials);
       },
+      {
+        cache: false,
+      },
     );
   }
 

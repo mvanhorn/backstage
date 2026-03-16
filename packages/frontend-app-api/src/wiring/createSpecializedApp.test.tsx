@@ -428,10 +428,6 @@ describe('createSpecializedApp', () => {
   it('should reuse provided apis', async () => {
     const testApiRef = createApiRef<{ value: string }>({ id: 'test.api' });
     const app = createSpecializedApp({
-      apis: TestApiRegistry.from(
-        [configApiRef, new ConfigReader({ anything: 'config' })],
-        [testApiRef, { value: 'from-apis' }],
-      ),
       features: [
         createFrontendPlugin({
           pluginId: 'test',
@@ -452,6 +448,12 @@ describe('createSpecializedApp', () => {
           ],
         }),
       ],
+      advanced: {
+        apis: TestApiRegistry.from(
+          [configApiRef, new ConfigReader({ anything: 'config' })],
+          [testApiRef, { value: 'from-apis' }],
+        ),
+      },
     });
 
     render(app.tree.root.instance!.getData(coreExtensionData.reactElement));

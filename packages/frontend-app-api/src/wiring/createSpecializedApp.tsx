@@ -60,14 +60,14 @@ export type CreateSpecializedAppOptions = {
   bindRoutes?(context: { bind: CreateAppRouteBinder }): void;
 
   /**
-   * APIs to expose to the app during startup.
-   */
-  apis?: ApiHolder;
-
-  /**
    * Advanced, more rarely used options.
    */
   advanced?: {
+    /**
+     * APIs to expose to the app during startup.
+     */
+    apis?: ApiHolder;
+
     /**
      * Applies one or more middleware on every extension, as they are added to
      * the application.
@@ -98,8 +98,8 @@ export type CreateSpecializedAppOptions = {
 export function createSpecializedApp(
   options?: CreateSpecializedAppOptions,
 ): FinalizedSpecializedApp {
-  const sessionState = options?.apis
-    ? createSessionStateFromApis(options.apis)
+  const sessionState = options?.advanced?.apis
+    ? createSessionStateFromApis(options.advanced.apis)
     : undefined;
 
   return prepareSpecializedApp({

@@ -151,6 +151,8 @@ type FinalizationState = {
   reject(error: unknown): void;
 };
 
+type FinalizationMode = 'onFinalized' | 'finalize';
+
 type InternalSpecializedAppSessionState = {
   apis: ApiHolder;
   identityApi?: IdentityApi;
@@ -374,6 +376,7 @@ export function prepareSpecializedApp(
   let bootstrapApp: BootstrapSpecializedApp | undefined;
   let bootstrapError: Error | undefined;
   let finalizationState: FinalizationState | undefined;
+  let finalizationMode: FinalizationMode | undefined;
 
   function updateIdentityApiTarget(identityApi?: IdentityApi) {
     if (!identityApi) {
@@ -541,6 +544,16 @@ export function prepareSpecializedApp(
     return finalization.promise;
   }
 
+  function selectFinalizationMode(mode: FinalizationMode) {
+    if (finalizationMode && finalizationMode !== mode) {
+      throw new Error(
+        `prepareSpecializedApp only supports using either onFinalized() or finalize(), not both`,
+      );
+    }
+
+    finalizationMode = mode;
+  }
+
   function getBootstrapApp() {
     if (bootstrapApp) {
       return bootstrapApp;
@@ -596,6 +609,7 @@ export function prepareSpecializedApp(
   return {
     getBootstrapApp,
     onFinalized(callback) {
+      selectFinalizationMode('onFinalized');
       getBootstrapApp();
 
       let subscribed = true;
@@ -628,6 +642,7 @@ export function prepareSpecializedApp(
       };
     },
     finalize(finalizeOptions?: { sessionState?: SpecializedAppSessionState }) {
+      selectFinalizationMode('finalize');
       if (finalized) {
         return finalized;
       }

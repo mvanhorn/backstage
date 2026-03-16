@@ -930,6 +930,32 @@ describe('createSpecializedApp', () => {
       expect(screen.getByText('Prepared')).toBeInTheDocument();
     });
 
+    it('should reject finalize after selecting onFinalized', () => {
+      const preparedApp = prepareSpecializedApp({
+        features: [makeAppPlugin()],
+      });
+
+      const unsubscribe = preparedApp.onFinalized(() => {});
+
+      expect(() => preparedApp.finalize()).toThrow(
+        'prepareSpecializedApp only supports using either onFinalized() or finalize(), not both',
+      );
+
+      unsubscribe();
+    });
+
+    it('should reject onFinalized after selecting finalize', () => {
+      const preparedApp = prepareSpecializedApp({
+        features: [makeAppPlugin()],
+      });
+
+      preparedApp.finalize();
+
+      expect(() => preparedApp.onFinalized(() => {})).toThrow(
+        'prepareSpecializedApp only supports using either onFinalized() or finalize(), not both',
+      );
+    });
+
     it('should synchronously finalize feature flag predicates without sign-in', async () => {
       const featureFlagsApi = {
         isActive: jest.fn((name: string) => name === 'test-flag'),
@@ -1771,15 +1797,6 @@ describe('createSpecializedApp', () => {
       expect(() => preparedApp.finalize()).toThrow(
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
       );
-
-      const finalizedApp = await waitForFinalizedApp(preparedApp);
-      render(
-        finalizedApp.tree.root.instance!.getData(
-          coreExtensionData.reactElement,
-        ),
-      );
-
-      expect(screen.getByText('App Layout')).toBeInTheDocument();
     });
   });
 });

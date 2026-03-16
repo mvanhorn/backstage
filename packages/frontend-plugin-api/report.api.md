@@ -1792,8 +1792,8 @@ export const PageBlueprint: ExtensionBlueprint_2<{
     title: string | undefined;
   };
   configInput: {
-    title?: string | undefined;
     path?: string | undefined;
+    title?: string | undefined;
   };
   dataRefs: never;
 }>;
@@ -1907,7 +1907,9 @@ export type PluginWrapperApi = {
 };
 
 // @public
-export const pluginWrapperApiRef: ApiRef_2<PluginWrapperApi>;
+export const pluginWrapperApiRef: ApiRef_2<PluginWrapperApi> & {
+  readonly $$type: '@backstage/ApiRef';
+};
 
 // @public
 export const PluginWrapperBlueprint: ExtensionBlueprint_2<{
@@ -2102,8 +2104,8 @@ export const SubPageBlueprint: ExtensionBlueprint_2<{
     title: string | undefined;
   };
   configInput: {
-    title?: string | undefined;
     path?: string | undefined;
+    title?: string | undefined;
   };
   dataRefs: never;
 }>;

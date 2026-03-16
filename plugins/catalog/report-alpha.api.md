@@ -46,8 +46,8 @@ export const catalogTranslationRef: TranslationRef<
     readonly 'indexPage.supportButtonContent': 'All your software catalog entities';
     readonly 'entityPage.notFoundMessage': 'There is no {{kind}} with the requested {{link}}.';
     readonly 'entityPage.notFoundLinkText': 'kind, namespace, and name';
-    readonly 'aboutCard.title': 'About';
     readonly 'aboutCard.unknown': 'unknown';
+    readonly 'aboutCard.title': 'About';
     readonly 'aboutCard.refreshButtonTitle': 'Schedule entity refresh';
     readonly 'aboutCard.editButtonTitle': 'Edit Metadata';
     readonly 'aboutCard.editButtonAriaLabel': 'Edit';
@@ -72,8 +72,8 @@ export const catalogTranslationRef: TranslationRef<
     readonly 'aboutCard.tagsField.value': 'No Tags';
     readonly 'aboutCard.tagsField.label': 'Tags';
     readonly 'aboutCard.targetsField.label': 'Targets';
-    readonly 'searchResultItem.type': 'Type';
     readonly 'searchResultItem.kind': 'Kind';
+    readonly 'searchResultItem.type': 'Type';
     readonly 'searchResultItem.owner': 'Owner';
     readonly 'searchResultItem.lifecycle': 'Lifecycle';
     readonly 'catalogTable.allFilters': 'All';
@@ -308,11 +308,11 @@ const _default: OverridableFrontendPlugin<
     'entity-card:catalog/about': OverridableExtensionDefinition<{
       config: {
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -378,11 +378,11 @@ const _default: OverridableFrontendPlugin<
       name: 'depends-on-components';
       config: {
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -419,11 +419,11 @@ const _default: OverridableFrontendPlugin<
       name: 'depends-on-resources';
       config: {
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -460,11 +460,11 @@ const _default: OverridableFrontendPlugin<
       name: 'has-components';
       config: {
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -501,11 +501,11 @@ const _default: OverridableFrontendPlugin<
       name: 'has-resources';
       config: {
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -542,11 +542,11 @@ const _default: OverridableFrontendPlugin<
       name: 'has-subcomponents';
       config: {
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -583,11 +583,11 @@ const _default: OverridableFrontendPlugin<
       name: 'has-subdomains';
       config: {
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -624,11 +624,11 @@ const _default: OverridableFrontendPlugin<
       name: 'has-systems';
       config: {
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -665,11 +665,11 @@ const _default: OverridableFrontendPlugin<
       name: 'labels';
       config: {
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -706,11 +706,11 @@ const _default: OverridableFrontendPlugin<
       name: 'links';
       config: {
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -752,10 +752,10 @@ const _default: OverridableFrontendPlugin<
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        title?: string | undefined;
         path?: string | undefined;
-        group?: string | false | undefined;
+        title?: string | undefined;
         icon?: string | undefined;
+        group?: string | false | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>
@@ -941,8 +941,8 @@ const _default: OverridableFrontendPlugin<
       };
       configInput: {
         filter?: FilterPredicate | undefined;
-        label?: string | undefined;
         title?: string | undefined;
+        label?: string | undefined;
       };
       output:
         | ExtensionDataRef<
@@ -996,7 +996,7 @@ const _default: OverridableFrontendPlugin<
         pagination:
           | boolean
           | {
-              mode: 'offset' | 'cursor';
+              mode: 'cursor' | 'offset';
               offset?: number | undefined;
               limit?: number | undefined;
             };
@@ -1007,13 +1007,13 @@ const _default: OverridableFrontendPlugin<
         pagination?:
           | boolean
           | {
-              mode: 'offset' | 'cursor';
+              mode: 'cursor' | 'offset';
               offset?: number | undefined;
               limit?: number | undefined;
             }
           | undefined;
-        title?: string | undefined;
         path?: string | undefined;
+        title?: string | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>
@@ -1122,8 +1122,8 @@ const _default: OverridableFrontendPlugin<
           | undefined;
         defaultContentOrder?: 'title' | 'natural' | undefined;
         showNavItemIcons?: boolean | undefined;
-        title?: string | undefined;
         path?: string | undefined;
+        title?: string | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>

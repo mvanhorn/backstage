@@ -108,8 +108,8 @@ const _default: OverridableFrontendPlugin<
         title: string | undefined;
       };
       configInput: {
-        title?: string | undefined;
         path?: string | undefined;
+        title?: string | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>
@@ -224,9 +224,9 @@ export const homeTranslationRef: TranslationRef<
     readonly 'widgetSettingsOverlay.deleteWidgetTooltip': 'Delete widget';
     readonly 'widgetSettingsOverlay.submitButtonTitle': 'Submit';
     readonly 'starredEntityListItem.removeFavoriteEntityTitle': 'Remove entity from favorites';
+    readonly 'visitList.few.title': 'The more pages you visit, the more pages will appear here.';
     readonly 'visitList.empty.title': 'There are no visits to show yet.';
     readonly 'visitList.empty.description': 'Once you start using Backstage, your visits will appear here as a quick link to carry on where you left off.';
-    readonly 'visitList.few.title': 'The more pages you visit, the more pages will appear here.';
     readonly 'quickStart.title': 'Onboarding';
     readonly 'quickStart.description': 'Get started with Backstage';
     readonly 'quickStart.learnMoreLinkTitle': 'Learn more';

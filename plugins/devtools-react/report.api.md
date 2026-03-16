@@ -30,8 +30,8 @@ export const DevToolsContentBlueprint: ExtensionBlueprint<{
     title: string | undefined;
   };
   configInput: {
-    title?: string | undefined;
     path?: string | undefined;
+    title?: string | undefined;
   };
   dataRefs: never;
 }>;

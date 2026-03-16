@@ -50,8 +50,8 @@ const _default: OverridableFrontendPlugin<
         title: string | undefined;
       };
       configInput: {
-        title?: string | undefined;
         path?: string | undefined;
+        title?: string | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>
@@ -164,22 +164,22 @@ export const userSettingsTranslationRef: TranslationRef<
     readonly 'featureFlags.filterTitle': 'Filter';
     readonly 'featureFlags.clearFilter': 'Clear filter';
     readonly 'featureFlags.emptyFlags.title': 'No Feature Flags';
+    readonly 'featureFlags.emptyFlags.description': 'Feature Flags make it possible for plugins to register features in Backstage for users to opt into. You can use this to split out logic in your code for manual A/B testing, etc.';
     readonly 'featureFlags.emptyFlags.action.title': 'An example for how to add a feature flag is highlighted below:';
     readonly 'featureFlags.emptyFlags.action.readMoreButtonTitle': 'Read More';
-    readonly 'featureFlags.emptyFlags.description': 'Feature Flags make it possible for plugins to register features in Backstage for users to opt into. You can use this to split out logic in your code for manual A/B testing, etc.';
     readonly 'featureFlags.flagItem.title.disable': 'Disable';
     readonly 'featureFlags.flagItem.title.enable': 'Enable';
     readonly 'featureFlags.flagItem.subtitle.registeredInApplication': 'Registered in the application';
     readonly 'featureFlags.flagItem.subtitle.registeredInPlugin': 'Registered in {{pluginId}} plugin';
-    readonly 'languageToggle.select': 'Select language {{language}}';
     readonly 'languageToggle.title': 'Language';
     readonly 'languageToggle.description': 'Change the language';
-    readonly 'themeToggle.select': 'Select {{theme}}';
+    readonly 'languageToggle.select': 'Select language {{language}}';
     readonly 'themeToggle.title': 'Theme';
     readonly 'themeToggle.description': 'Change the theme mode';
+    readonly 'themeToggle.select': 'Select {{theme}}';
     readonly 'themeToggle.names.auto': 'Auto';
-    readonly 'themeToggle.names.dark': 'Dark';
     readonly 'themeToggle.names.light': 'Light';
+    readonly 'themeToggle.names.dark': 'Dark';
     readonly 'themeToggle.selectAuto': 'Select Auto Theme';
     readonly 'signOutMenu.title': 'Sign Out';
     readonly 'signOutMenu.moreIconTitle': 'more';
@@ -194,9 +194,9 @@ export const userSettingsTranslationRef: TranslationRef<
     readonly 'identityCard.ownershipEntities': 'Ownership Entities';
     readonly 'defaultProviderSettings.description': 'Provides authentication towards {{provider}} APIs and identities';
     readonly 'emptyProviders.title': 'No Authentication Providers';
+    readonly 'emptyProviders.description': 'You can add Authentication Providers to Backstage which allows you to use these providers to authenticate yourself.';
     readonly 'emptyProviders.action.title': 'Open app-config.yaml and make the changes as highlighted below:';
     readonly 'emptyProviders.action.readMoreButtonTitle': 'Read More';
-    readonly 'emptyProviders.description': 'You can add Authentication Providers to Backstage which allows you to use these providers to authenticate yourself.';
     readonly 'providerSettingsItem.title.signOut': 'Sign out from {{title}}';
     readonly 'providerSettingsItem.title.signIn': 'Sign in to {{title}}';
     readonly 'providerSettingsItem.buttonTitle.signOut': 'Sign out';

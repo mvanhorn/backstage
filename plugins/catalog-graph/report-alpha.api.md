@@ -95,14 +95,14 @@ const _default: OverridableFrontendPlugin<
         title: string | undefined;
         height: number | undefined;
         filter: FilterPredicate | undefined;
-        type: 'content' | 'info' | undefined;
+        type: 'info' | 'content' | undefined;
       };
       configInput: {
+        title?: string | undefined;
         height?: number | undefined;
-        curve?: 'curveStepBefore' | 'curveMonotoneX' | undefined;
         direction?: 'TB' | 'BT' | 'LR' | 'RL' | undefined;
         zoom?: 'disabled' | 'enabled' | 'enable-on-click' | undefined;
-        title?: string | undefined;
+        curve?: 'curveStepBefore' | 'curveMonotoneX' | undefined;
         relations?: string[] | undefined;
         maxDepth?: number | undefined;
         kinds?: string[] | undefined;
@@ -110,7 +110,7 @@ const _default: OverridableFrontendPlugin<
         relationPairs?: [string, string][] | undefined;
         unidirectional?: boolean | undefined;
         filter?: FilterPredicate | undefined;
-        type?: 'content' | 'info' | undefined;
+        type?: 'info' | 'content' | undefined;
       };
       output:
         | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
@@ -163,12 +163,12 @@ const _default: OverridableFrontendPlugin<
         title: string | undefined;
       };
       configInput: {
-        curve?: 'curveStepBefore' | 'curveMonotoneX' | undefined;
         direction?: 'TB' | 'BT' | 'LR' | 'RL' | undefined;
         zoom?: 'disabled' | 'enabled' | 'enable-on-click' | undefined;
+        curve?: 'curveStepBefore' | 'curveMonotoneX' | undefined;
         relations?: string[] | undefined;
-        maxDepth?: number | undefined;
         rootEntityRefs?: string[] | undefined;
+        maxDepth?: number | undefined;
         kinds?: string[] | undefined;
         mergeRelations?: boolean | undefined;
         relationPairs?: [string, string][] | undefined;
@@ -176,8 +176,8 @@ const _default: OverridableFrontendPlugin<
         selectedRelations?: string[] | undefined;
         selectedKinds?: string[] | undefined;
         showFilters?: boolean | undefined;
-        title?: string | undefined;
         path?: string | undefined;
+        title?: string | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>

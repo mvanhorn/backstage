@@ -70,8 +70,8 @@ const _default: OverridableFrontendPlugin<
         title: string | undefined;
       };
       configInput: {
-        title?: string | undefined;
         path?: string | undefined;
+        title?: string | undefined;
       };
       output:
         | ExtensionDataRef<string, 'core.routing.path', {}>
@@ -151,8 +151,8 @@ export const unprocessedEntitiesDevToolsContent: OverridableExtensionDefinition<
     title: string | undefined;
   };
   configInput: {
-    title?: string | undefined;
     path?: string | undefined;
+    title?: string | undefined;
   };
   output:
     | ExtensionDataRef<string, 'core.routing.path', {}>

@@ -50,6 +50,8 @@ export type DiscoveryApi = {
  *
  * @public
  */
-export const discoveryApiRef: ApiRef<DiscoveryApi> = createApiRef({
-  id: 'core.discovery',
-});
+export const discoveryApiRef: ApiRef<DiscoveryApi> =
+  createApiRef<DiscoveryApi>().with({
+    id: 'core.discovery',
+    pluginId: 'app',
+  });

@@ -151,6 +151,8 @@ export type AnalyticsApi = {
  *
  * @public
  */
-export const analyticsApiRef: ApiRef<AnalyticsApi> = createApiRef({
-  id: 'core.analytics',
-});
+export const analyticsApiRef: ApiRef<AnalyticsApi> =
+  createApiRef<AnalyticsApi>().with({
+    id: 'core.analytics',
+    pluginId: 'app',
+  });

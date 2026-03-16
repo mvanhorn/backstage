@@ -401,7 +401,7 @@ function createApiFactories(options: {
     const apiFactory = apiNode.instance?.getData(ApiBlueprint.dataRefs.factory);
     if (apiFactory) {
       const apiRefId = apiFactory.api.id;
-      const ownerId = getApiOwnerId(apiRefId);
+      const ownerId = getApiOwnerId(apiFactory.api);
       const pluginId = apiNode.spec.plugin.pluginId ?? 'app';
       const existingFactory = factoriesById.get(apiRefId);
 
@@ -455,7 +455,12 @@ function createApiFactories(options: {
 
 // TODO(Rugvip): It would be good if this was more explicit, but I think that
 //               might need to wait for some future update for API factories.
-function getApiOwnerId(apiRefId: string): string {
+function getApiOwnerId(apiRef: { id: string; pluginId?: string }): string {
+  if (apiRef.pluginId) {
+    return apiRef.pluginId;
+  }
+
+  const apiRefId = apiRef.id;
   const [prefix, ...rest] = apiRefId.split('.');
   if (!prefix) {
     return apiRefId;

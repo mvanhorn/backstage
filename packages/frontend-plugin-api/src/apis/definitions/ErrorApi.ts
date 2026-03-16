@@ -86,6 +86,7 @@ export type ErrorApi = {
  *
  * @public
  */
-export const errorApiRef: ApiRef<ErrorApi> = createApiRef({
+export const errorApiRef: ApiRef<ErrorApi> = createApiRef<ErrorApi>().with({
   id: 'core.error',
+  pluginId: 'app',
 });

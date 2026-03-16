@@ -51,6 +51,7 @@ export type AlertApi = {
  *
  * @public
  */
-export const alertApiRef: ApiRef<AlertApi> = createApiRef({
+export const alertApiRef: ApiRef<AlertApi> = createApiRef<AlertApi>().with({
   id: 'core.alert',
+  pluginId: 'app',
 });

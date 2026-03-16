@@ -358,6 +358,8 @@ export type TranslationApi = {
 /**
  * @public
  */
-export const translationApiRef: ApiRef<TranslationApi> = createApiRef({
-  id: 'core.translation',
-});
+export const translationApiRef: ApiRef<TranslationApi> =
+  createApiRef<TranslationApi>().with({
+    id: 'core.translation',
+    pluginId: 'app',
+  });

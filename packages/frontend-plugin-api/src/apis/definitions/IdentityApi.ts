@@ -51,6 +51,8 @@ export type IdentityApi = {
  *
  * @public
  */
-export const identityApiRef: ApiRef<IdentityApi> = createApiRef({
-  id: 'core.identity',
-});
+export const identityApiRef: ApiRef<IdentityApi> =
+  createApiRef<IdentityApi>().with({
+    id: 'core.identity',
+    pluginId: 'app',
+  });

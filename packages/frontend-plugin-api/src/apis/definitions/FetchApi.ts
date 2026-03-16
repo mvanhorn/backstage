@@ -46,6 +46,7 @@ export type FetchApi = {
  *
  * @public
  */
-export const fetchApiRef: ApiRef<FetchApi> = createApiRef({
+export const fetchApiRef: ApiRef<FetchApi> = createApiRef<FetchApi>().with({
   id: 'core.fetch',
+  pluginId: 'app',
 });

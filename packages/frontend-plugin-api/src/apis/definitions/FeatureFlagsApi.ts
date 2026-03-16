@@ -121,6 +121,8 @@ export interface FeatureFlagsApi {
  *
  * @public
  */
-export const featureFlagsApiRef: ApiRef<FeatureFlagsApi> = createApiRef({
-  id: 'core.featureflags',
-});
+export const featureFlagsApiRef: ApiRef<FeatureFlagsApi> =
+  createApiRef<FeatureFlagsApi>().with({
+    id: 'core.featureflags',
+    pluginId: 'app',
+  });

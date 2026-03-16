@@ -31,6 +31,8 @@ export type AppLanguageApi = {
 /**
  * @public
  */
-export const appLanguageApiRef: ApiRef<AppLanguageApi> = createApiRef({
-  id: 'core.applanguage',
-});
+export const appLanguageApiRef: ApiRef<AppLanguageApi> =
+  createApiRef<AppLanguageApi>().with({
+    id: 'core.applanguage',
+    pluginId: 'app',
+  });

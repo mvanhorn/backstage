@@ -105,6 +105,8 @@ export interface StorageApi {
  *
  * @public
  */
-export const storageApiRef: ApiRef<StorageApi> = createApiRef({
-  id: 'core.storage',
-});
+export const storageApiRef: ApiRef<StorageApi> =
+  createApiRef<StorageApi>().with({
+    id: 'core.storage',
+    pluginId: 'app',
+  });

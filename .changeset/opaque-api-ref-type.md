@@ -1,7 +1,5 @@
----
-'@backstage/frontend-plugin-api': minor
----
+## '@backstage/frontend-plugin-api': patch
 
-**BREAKING**: The `ApiRef` type is now an opaque type with a `$$type` discriminator field and `readonly` properties. This means that `ApiRef` instances can no longer be created as plain object literals. Use `createApiRef` to create API references.
+Added a builder form for `createApiRef` in the new frontend system and deprecated the direct `createApiRef({ ... })` call in favor of `createApiRef().with({ ... })`.
 
-Added a new builder pattern for creating API references: `createApiRef<MyApi>().with({ id: 'plugin.my.api' })`. The existing `createApiRef<MyApi>({ id: 'plugin.my.api' })` pattern continues to work.
+`ApiRef` and `ApiRefConfig` now also support an explicit `pluginId`, making it possible to declare API ownership without encoding the plugin ID into the API ref ID.

@@ -29,6 +29,7 @@ export type ConfigApi = Config;
  *
  * @public
  */
-export const configApiRef: ApiRef<ConfigApi> = createApiRef({
+export const configApiRef: ApiRef<ConfigApi> = createApiRef<ConfigApi>().with({
   id: 'core.config',
+  pluginId: 'app',
 });

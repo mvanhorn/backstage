@@ -188,14 +188,16 @@ export type ApiHolder = {
 
 // @public
 export type ApiRef<T> = {
-  readonly $$type: '@backstage/ApiRef';
+  readonly $$type?: '@backstage/ApiRef';
   readonly id: string;
+  readonly pluginId?: string;
   readonly T: T;
 };
 
 // @public
 export type ApiRefConfig = {
   id: string;
+  pluginId?: string;
 };
 
 // @public (undocumented)
@@ -306,7 +308,9 @@ export interface AppTreeApi {
 }
 
 // @public
-export const appTreeApiRef: ApiRef_2<AppTreeApi>;
+export const appTreeApiRef: ApiRef_2<AppTreeApi> & {
+  readonly $$type: '@backstage/ApiRef';
+};
 
 // @public
 export const atlassianAuthApiRef: ApiRef<
@@ -416,12 +420,16 @@ export function createApiFactory<Api, Impl extends Api>(
   instance: Impl,
 ): ApiFactory<Api, Impl, {}>;
 
-// @public
-export function createApiRef<T>(config: ApiRefConfig): ApiRef<T>;
+// @public @deprecated
+export function createApiRef<T>(config: ApiRefConfig): ApiRef<T> & {
+  readonly $$type: '@backstage/ApiRef';
+};
 
 // @public
 export function createApiRef<T>(): {
-  with(config: ApiRefConfig): ApiRef<T>;
+  with(config: ApiRefConfig): ApiRef<T> & {
+    readonly $$type: '@backstage/ApiRef';
+  };
 };
 
 // @public
@@ -875,7 +883,9 @@ export interface DialogApiDialog<TResult = void> {
 }
 
 // @public
-export const dialogApiRef: ApiRef_2<DialogApi>;
+export const dialogApiRef: ApiRef_2<DialogApi> & {
+  readonly $$type: '@backstage/ApiRef';
+};
 
 // @public
 export type DiscoveryApi = {
@@ -1436,7 +1446,9 @@ export interface IconsApi {
 }
 
 // @public
-export const iconsApiRef: ApiRef_2<IconsApi>;
+export const iconsApiRef: ApiRef_2<IconsApi> & {
+  readonly $$type: '@backstage/ApiRef';
+};
 
 // @public
 export type IdentityApi = {
@@ -1851,7 +1863,9 @@ export type PluginHeaderActionsApi = {
 };
 
 // @public
-export const pluginHeaderActionsApiRef: ApiRef_2<PluginHeaderActionsApi>;
+export const pluginHeaderActionsApiRef: ApiRef_2<PluginHeaderActionsApi> & {
+  readonly $$type: '@backstage/ApiRef';
+};
 
 // @public (undocumented)
 export interface PluginOptions<
@@ -1999,7 +2013,9 @@ export interface RouteResolutionApi {
 }
 
 // @public
-export const routeResolutionApiRef: ApiRef_2<RouteResolutionApi>;
+export const routeResolutionApiRef: ApiRef_2<RouteResolutionApi> & {
+  readonly $$type: '@backstage/ApiRef';
+};
 
 // @public
 export type SessionApi = {
@@ -2127,7 +2143,9 @@ export interface SwappableComponentsApi {
 }
 
 // @public
-export const swappableComponentsApiRef: ApiRef_2<SwappableComponentsApi>;
+export const swappableComponentsApiRef: ApiRef_2<SwappableComponentsApi> & {
+  readonly $$type: '@backstage/ApiRef';
+};
 
 // @public (undocumented)
 export type TranslationApi = {

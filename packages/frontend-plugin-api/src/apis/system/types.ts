@@ -20,8 +20,9 @@
  * @public
  */
 export type ApiRef<T> = {
-  readonly $$type: '@backstage/ApiRef';
+  readonly $$type?: '@backstage/ApiRef';
   readonly id: string;
+  readonly pluginId?: string;
   readonly T: T;
 };
 

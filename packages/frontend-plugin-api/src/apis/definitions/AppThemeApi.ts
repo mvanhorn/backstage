@@ -82,6 +82,8 @@ export type AppThemeApi = {
  *
  * @public
  */
-export const appThemeApiRef: ApiRef<AppThemeApi> = createApiRef({
-  id: 'core.apptheme',
-});
+export const appThemeApiRef: ApiRef<AppThemeApi> =
+  createApiRef<AppThemeApi>().with({
+    id: 'core.apptheme',
+    pluginId: 'app',
+  });

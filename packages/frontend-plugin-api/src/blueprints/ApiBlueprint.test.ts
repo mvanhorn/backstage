@@ -20,7 +20,7 @@ import { createApiRef } from '../apis/system';
 
 describe('ApiBlueprint', () => {
   it('should create an extension with sensible defaults', () => {
-    const api = createApiRef<{ foo: string }>({ id: 'test' });
+    const api = createApiRef<{ foo: string }>().with({ id: 'test' });
 
     const extension = ApiBlueprint.make({
       params: defineParams =>
@@ -57,8 +57,8 @@ describe('ApiBlueprint', () => {
   });
 
   it('should properly type the API factory', () => {
-    const fooApi = createApiRef<{ foo: string }>({ id: 'foo' });
-    const barApi = createApiRef<{ bar: string }>({ id: 'bar' });
+    const fooApi = createApiRef<{ foo: string }>().with({ id: 'foo' });
+    const barApi = createApiRef<{ bar: string }>().with({ id: 'bar' });
 
     expect('test').not.toBe('failing without assertions');
 
@@ -152,7 +152,7 @@ describe('ApiBlueprint', () => {
   });
 
   it('should create an extension with custom factory', () => {
-    const api = createApiRef<{ foo: string }>({ id: 'test' });
+    const api = createApiRef<{ foo: string }>().with({ id: 'test' });
     const factory = jest.fn(() => ({ foo: 'bar' }));
 
     const extension = ApiBlueprint.makeWithOverrides({

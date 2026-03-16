@@ -126,6 +126,8 @@ export type OAuthRequestApi = {
  *
  * @public
  */
-export const oauthRequestApiRef: ApiRef<OAuthRequestApi> = createApiRef({
-  id: 'core.oauthrequest',
-});
+export const oauthRequestApiRef: ApiRef<OAuthRequestApi> =
+  createApiRef<OAuthRequestApi>().with({
+    id: 'core.oauthrequest',
+    pluginId: 'app',
+  });

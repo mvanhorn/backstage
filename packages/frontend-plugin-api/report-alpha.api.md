@@ -24,7 +24,9 @@ export type PluginWrapperApi = {
 };
 
 // @public
-export const pluginWrapperApiRef: ApiRef<PluginWrapperApi>;
+export const pluginWrapperApiRef: ApiRef<PluginWrapperApi> & {
+  readonly $$type: '@backstage/ApiRef';
+};
 
 // @public
 export const PluginWrapperBlueprint: ExtensionBlueprint<{

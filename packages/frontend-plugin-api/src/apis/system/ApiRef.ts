@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { OpaqueType } from '@internal/opaque';
 import type { ApiRef } from './types';
 
 /**
@@ -23,7 +24,20 @@ import type { ApiRef } from './types';
  */
 export type ApiRefConfig = {
   id: string;
+  pluginId?: string;
 };
+
+const OpaqueApiRef = OpaqueType.create<{
+  public: ApiRef<unknown> & {
+    readonly $$type: '@backstage/ApiRef';
+  };
+  versions: {
+    readonly version: 'v1';
+  };
+}>({
+  type: '@backstage/ApiRef',
+  versions: ['v1'],
+});
 
 function validateId(id: string): void {
   const valid = id
@@ -37,22 +51,24 @@ function validateId(id: string): void {
   }
 }
 
-function makeApiRef<T>(id: string): ApiRef<T> {
-  const ref = {
-    $$type: '@backstage/ApiRef' as const,
-    version: 'v1',
-    id,
+function makeApiRef<T>(
+  config: ApiRefConfig,
+): ApiRef<T> & { readonly $$type: '@backstage/ApiRef' } {
+  const ref = OpaqueApiRef.createInstance('v1', {
+    id: config.id,
+    ...(config.pluginId ? { pluginId: config.pluginId } : {}),
+    T: undefined as T,
     toString() {
-      return `apiRef{${id}}`;
+      return `apiRef{${config.id}}`;
     },
-  };
+  }) as ApiRef<T> & { readonly $$type: '@backstage/ApiRef' };
   Object.defineProperty(ref, 'T', {
     get(): T {
       throw new Error(`tried to read ApiRef.T of ${this}`);
     },
     enumerable: false,
   });
-  return ref as unknown as ApiRef<T>;
+  return ref;
 }
 
 /**
@@ -61,18 +77,22 @@ function makeApiRef<T>(id: string): ApiRef<T> {
  * @remarks
  *
  * The `id` is a stable identifier for the API implementation. The frontend
- * system infers the owning plugin for an API from the `id`. The recommended
- * pattern is `plugin.<plugin-id>.*` (for example,
+ * system infers the owning plugin for an API from the `id`, unless you provide
+ * a `pluginId` explicitly. The recommended pattern is `plugin.<plugin-id>.*`
+ * (for example,
  * `plugin.catalog.entity-presentation`). This ensures that other plugins can't
  * mistakenly override your API implementation.
  *
  * The recommended way to create an API reference is:
  *
  * ```ts
- * const myApiRef = createApiRef<MyApi>().with({ id: 'plugin.my.api' });
+ * const myApiRef = createApiRef<MyApi>().with({
+ *   id: 'my-api',
+ *   pluginId: 'my-plugin',
+ * });
  * ```
  *
- * For backwards compatibility, you can also pass the config directly:
+ * The legacy way to create an API reference is:
  *
  * ```ts
  * const myApiRef = createApiRef<MyApi>({ id: 'plugin.my.api' });
@@ -80,30 +100,47 @@ function makeApiRef<T>(id: string): ApiRef<T> {
  *
  * @public
  */
-export function createApiRef<T>(config: ApiRefConfig): ApiRef<T>;
+/**
+ * Creates a reference to an API.
+ *
+ * @deprecated Use `createApiRef<T>().with(...)` instead.
+ * @public
+ */
+export function createApiRef<T>(
+  config: ApiRefConfig,
+): ApiRef<T> & { readonly $$type: '@backstage/ApiRef' };
 /**
  * Creates a reference to an API.
  *
  * @remarks
  *
- * Returns a builder with a `.with()` method for providing the `id`.
+ * Returns a builder with a `.with()` method for providing the API reference
+ * configuration.
  *
  * @public
  */
 export function createApiRef<T>(): {
-  with(config: ApiRefConfig): ApiRef<T>;
+  with(config: ApiRefConfig): ApiRef<T> & {
+    readonly $$type: '@backstage/ApiRef';
+  };
 };
-export function createApiRef<T>(
-  config?: ApiRefConfig,
-): ApiRef<T> | { with(config: ApiRefConfig): ApiRef<T> } {
+export function createApiRef<T>(config?: ApiRefConfig):
+  | (ApiRef<T> & { readonly $$type: '@backstage/ApiRef' })
+  | {
+      with(config: ApiRefConfig): ApiRef<T> & {
+        readonly $$type: '@backstage/ApiRef';
+      };
+    } {
   if (config) {
     validateId(config.id);
-    return makeApiRef<T>(config.id);
+    return makeApiRef<T>(config);
   }
   return {
-    with(withConfig: ApiRefConfig): ApiRef<T> {
+    with(withConfig: ApiRefConfig): ApiRef<T> & {
+      readonly $$type: '@backstage/ApiRef';
+    } {
       validateId(withConfig.id);
-      return makeApiRef<T>(withConfig.id);
+      return makeApiRef<T>(withConfig);
     },
   };
 }

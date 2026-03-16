@@ -28,7 +28,10 @@ import { Observable } from '@backstage/types';
  * For example, a Google OAuth provider that supports OAuth 2 and OpenID Connect,
  * would be declared as follows:
  *
- * const googleAuthApiRef = createApiRef<OAuthApi & OpenIDConnectApi>({ ... })
+ * const googleAuthApiRef = createApiRef<OAuthApi & OpenIDConnectApi>().with({
+ *   id: 'core.auth.google',
+ *   pluginId: 'app',
+ * })
  */
 
 /**
@@ -339,8 +342,15 @@ export const googleAuthApiRef: ApiRef<
     ProfileInfoApi &
     BackstageIdentityApi &
     SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi &
+    OpenIdConnectApi &
+    ProfileInfoApi &
+    BackstageIdentityApi &
+    SessionApi
+>().with({
   id: 'core.auth.google',
+  pluginId: 'app',
 });
 
 /**
@@ -354,8 +364,11 @@ export const googleAuthApiRef: ApiRef<
  */
 export const githubAuthApiRef: ApiRef<
   OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+>().with({
   id: 'core.auth.github',
+  pluginId: 'app',
 });
 
 /**
@@ -373,8 +386,15 @@ export const oktaAuthApiRef: ApiRef<
     ProfileInfoApi &
     BackstageIdentityApi &
     SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi &
+    OpenIdConnectApi &
+    ProfileInfoApi &
+    BackstageIdentityApi &
+    SessionApi
+>().with({
   id: 'core.auth.okta',
+  pluginId: 'app',
 });
 
 /**
@@ -392,8 +412,15 @@ export const gitlabAuthApiRef: ApiRef<
     ProfileInfoApi &
     BackstageIdentityApi &
     SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi &
+    OpenIdConnectApi &
+    ProfileInfoApi &
+    BackstageIdentityApi &
+    SessionApi
+>().with({
   id: 'core.auth.gitlab',
+  pluginId: 'app',
 });
 
 /**
@@ -412,8 +439,15 @@ export const microsoftAuthApiRef: ApiRef<
     ProfileInfoApi &
     BackstageIdentityApi &
     SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi &
+    OpenIdConnectApi &
+    ProfileInfoApi &
+    BackstageIdentityApi &
+    SessionApi
+>().with({
   id: 'core.auth.microsoft',
+  pluginId: 'app',
 });
 
 /**
@@ -427,8 +461,15 @@ export const oneloginAuthApiRef: ApiRef<
     ProfileInfoApi &
     BackstageIdentityApi &
     SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi &
+    OpenIdConnectApi &
+    ProfileInfoApi &
+    BackstageIdentityApi &
+    SessionApi
+>().with({
   id: 'core.auth.onelogin',
+  pluginId: 'app',
 });
 
 /**
@@ -442,8 +483,11 @@ export const oneloginAuthApiRef: ApiRef<
  */
 export const bitbucketAuthApiRef: ApiRef<
   OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+>().with({
   id: 'core.auth.bitbucket',
+  pluginId: 'app',
 });
 
 /**
@@ -457,8 +501,11 @@ export const bitbucketAuthApiRef: ApiRef<
  */
 export const bitbucketServerAuthApiRef: ApiRef<
   OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+>().with({
   id: 'core.auth.bitbucket-server',
+  pluginId: 'app',
 });
 
 /**
@@ -472,8 +519,11 @@ export const bitbucketServerAuthApiRef: ApiRef<
  */
 export const atlassianAuthApiRef: ApiRef<
   OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+>().with({
   id: 'core.auth.atlassian',
+  pluginId: 'app',
 });
 
 /**
@@ -491,8 +541,15 @@ export const vmwareCloudAuthApiRef: ApiRef<
     ProfileInfoApi &
     BackstageIdentityApi &
     SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi &
+    OpenIdConnectApi &
+    ProfileInfoApi &
+    BackstageIdentityApi &
+    SessionApi
+>().with({
   id: 'core.auth.vmware-cloud',
+  pluginId: 'app',
 });
 
 /**
@@ -508,6 +565,9 @@ export const vmwareCloudAuthApiRef: ApiRef<
  */
 export const openshiftAuthApiRef: ApiRef<
   OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
-> = createApiRef({
+> = createApiRef<
+  OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+>().with({
   id: 'core.auth.openshift',
+  pluginId: 'app',
 });

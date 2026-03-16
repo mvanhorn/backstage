@@ -169,6 +169,7 @@ describe('createSpecializedApp', () => {
                 "api": {
                   "$$type": "@backstage/ApiRef",
                   "id": "core.featureflags",
+                  "pluginId": "app",
                   "toString": [Function],
                   "version": "v1",
                 },
@@ -182,6 +183,7 @@ describe('createSpecializedApp', () => {
                 "api": {
                   "$$type": "@backstage/ApiRef",
                   "id": "core.app-tree",
+                  "pluginId": "app",
                   "toString": [Function],
                   "version": "v1",
                 },
@@ -195,6 +197,7 @@ describe('createSpecializedApp', () => {
                 "api": {
                   "$$type": "@backstage/ApiRef",
                   "id": "core.config",
+                  "pluginId": "app",
                   "toString": [Function],
                   "version": "v1",
                 },
@@ -208,6 +211,7 @@ describe('createSpecializedApp', () => {
                 "api": {
                   "$$type": "@backstage/ApiRef",
                   "id": "core.route-resolution",
+                  "pluginId": "app",
                   "toString": [Function],
                   "version": "v1",
                 },
@@ -221,6 +225,7 @@ describe('createSpecializedApp', () => {
                 "api": {
                   "$$type": "@backstage/ApiRef",
                   "id": "core.identity",
+                  "pluginId": "app",
                   "toString": [Function],
                   "version": "v1",
                 },
@@ -358,6 +363,54 @@ describe('createSpecializedApp', () => {
       expect.objectContaining({
         code: 'API_FACTORY_CONFLICT',
         message: expect.stringContaining("API 'test.api'"),
+      }),
+    ]);
+
+    expect(app.apis.get(testApiRef)).toEqual({ value: 'owner' });
+  });
+
+  it('should select the API factory from an explicitly owned plugin on conflict', () => {
+    const testApiRef = createApiRef<{ value: string }>().with({
+      id: 'shared.api',
+      pluginId: 'owner',
+    });
+
+    const app = createSpecializedApp({
+      features: [
+        makeAppPlugin(),
+        createFrontendPlugin({
+          pluginId: 'other-before',
+          extensions: [
+            ApiBlueprint.make({
+              params: defineParams =>
+                defineParams({
+                  api: testApiRef,
+                  deps: {},
+                  factory: () => ({ value: 'other' }),
+                }),
+            }),
+          ],
+        }),
+        createFrontendPlugin({
+          pluginId: 'owner',
+          extensions: [
+            ApiBlueprint.make({
+              params: defineParams =>
+                defineParams({
+                  api: testApiRef,
+                  deps: {},
+                  factory: () => ({ value: 'owner' }),
+                }),
+            }),
+          ],
+        }),
+      ],
+    });
+
+    expect(app.errors).toEqual([
+      expect.objectContaining({
+        code: 'API_FACTORY_CONFLICT',
+        message: expect.stringContaining("API 'shared.api'"),
       }),
     ]);
 

@@ -22,7 +22,12 @@ describe('ApiRef', () => {
     expect(ref.$$type).toBe('@backstage/ApiRef');
     expect(ref.id).toBe('abc');
     expect(String(ref)).toBe('apiRef{abc}');
-    expect(() => ref.T).toThrow('tried to read ApiRef.T of apiRef{abc}');
+    expect(ref.T).toBeNull();
+  });
+
+  it('should not accept pluginId in the core createApiRef config', () => {
+    // @ts-expect-error pluginId is not supported in core-plugin-api
+    createApiRef<string>({ id: 'abc', pluginId: 'test' });
   });
 
   it('should reject invalid ids', () => {

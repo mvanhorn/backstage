@@ -407,8 +407,8 @@ function createApiFactories(options: {
 
       // This allows modules to override factories provided by the plugin, but
       // it rejects API overrides from other plugins. In the event of a
-      // conflict, the owning plugin is attempted to be inferred from the API
-      // reference ID.
+      // conflict, the owning plugin is inferred from the explicit pluginId or
+      // legacy plugin-prefixed API reference ID.
       if (existingFactory && existingFactory.pluginId !== pluginId) {
         const shouldReplace =
           ownerId === pluginId && existingFactory.pluginId !== ownerId;
@@ -464,9 +464,6 @@ function getApiOwnerId(apiRef: { id: string; pluginId?: string }): string {
   const [prefix, ...rest] = apiRefId.split('.');
   if (!prefix) {
     return apiRefId;
-  }
-  if (prefix === 'core') {
-    return 'app';
   }
   if (prefix === 'plugin' && rest[0]) {
     return rest[0];

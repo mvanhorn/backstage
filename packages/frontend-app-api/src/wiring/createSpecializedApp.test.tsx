@@ -417,6 +417,51 @@ describe('createSpecializedApp', () => {
     expect(app.apis.get(testApiRef)).toEqual({ value: 'owner' });
   });
 
+  it('should not infer app ownership from core-prefixed API ids', () => {
+    const testApiRef = createApiRef<{ value: string }>({ id: 'core.shared' });
+
+    const app = createSpecializedApp({
+      features: [
+        makeAppPlugin(),
+        createFrontendPlugin({
+          pluginId: 'other-before',
+          extensions: [
+            ApiBlueprint.make({
+              params: defineParams =>
+                defineParams({
+                  api: testApiRef,
+                  deps: {},
+                  factory: () => ({ value: 'other' }),
+                }),
+            }),
+          ],
+        }),
+        createFrontendModule({
+          pluginId: 'app',
+          extensions: [
+            ApiBlueprint.make({
+              params: defineParams =>
+                defineParams({
+                  api: testApiRef,
+                  deps: {},
+                  factory: () => ({ value: 'app' }),
+                }),
+            }),
+          ],
+        }),
+      ],
+    });
+
+    expect(app.errors).toEqual([
+      expect.objectContaining({
+        code: 'API_FACTORY_CONFLICT',
+        message: expect.stringContaining("API 'core.shared'"),
+      }),
+    ]);
+
+    expect(app.apis.get(testApiRef)).toEqual({ value: 'other' });
+  });
+
   it('should allow API overrides within the same plugin', () => {
     const testApiRef = createApiRef<{ value: string }>({ id: 'test.api' });
 

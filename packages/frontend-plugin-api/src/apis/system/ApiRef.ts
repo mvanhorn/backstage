@@ -24,6 +24,10 @@ import type { ApiRef } from './types';
  */
 export type ApiRefConfig = {
   id: string;
+};
+
+type ApiRefBuilderConfig<TId extends string> = {
+  id: TId;
   pluginId?: string;
 };
 
@@ -51,24 +55,17 @@ function validateId(id: string): void {
   }
 }
 
-function makeApiRef<T>(
-  config: ApiRefConfig,
-): ApiRef<T> & { readonly $$type: '@backstage/ApiRef' } {
-  const ref = OpaqueApiRef.createInstance('v1', {
+function makeApiRef<T, TId extends string>(
+  config: ApiRefBuilderConfig<TId>,
+): ApiRef<T, TId> & { readonly $$type: '@backstage/ApiRef' } {
+  return OpaqueApiRef.createInstance('v1', {
     id: config.id,
     ...(config.pluginId ? { pluginId: config.pluginId } : {}),
-    T: undefined as T,
+    T: null as unknown as T,
     toString() {
       return `apiRef{${config.id}}`;
     },
-  }) as ApiRef<T> & { readonly $$type: '@backstage/ApiRef' };
-  Object.defineProperty(ref, 'T', {
-    get(): T {
-      throw new Error(`tried to read ApiRef.T of ${this}`);
-    },
-    enumerable: false,
-  });
-  return ref;
+  }) as ApiRef<T, TId> & { readonly $$type: '@backstage/ApiRef' };
 }
 
 /**
@@ -77,9 +74,9 @@ function makeApiRef<T>(
  * @remarks
  *
  * The `id` is a stable identifier for the API implementation. The frontend
- * system infers the owning plugin for an API from the `id`, unless you provide
- * a `pluginId` explicitly. The recommended pattern is `plugin.<plugin-id>.*`
- * (for example,
+ * system infers the owning plugin for an API from the `id`. When using the
+ * builder form, you can instead provide a `pluginId` explicitly. The
+ * recommended pattern is `plugin.<plugin-id>.*` (for example,
  * `plugin.catalog.entity-presentation`). This ensures that other plugins can't
  * mistakenly override your API implementation.
  *
@@ -120,27 +117,31 @@ export function createApiRef<T>(
  * @public
  */
 export function createApiRef<T>(): {
-  with(config: ApiRefConfig): ApiRef<T> & {
+  with<TId extends string>(
+    config: ApiRefConfig & { id: TId; pluginId?: string },
+  ): ApiRef<T, TId> & {
     readonly $$type: '@backstage/ApiRef';
   };
 };
 export function createApiRef<T>(config?: ApiRefConfig):
   | (ApiRef<T> & { readonly $$type: '@backstage/ApiRef' })
   | {
-      with(config: ApiRefConfig): ApiRef<T> & {
+      with<TId extends string>(
+        config: ApiRefConfig & { id: TId; pluginId?: string },
+      ): ApiRef<T, TId> & {
         readonly $$type: '@backstage/ApiRef';
       };
     } {
   if (config) {
     validateId(config.id);
-    return makeApiRef<T>(config);
+    return makeApiRef<T, string>(config);
   }
   return {
-    with(withConfig: ApiRefConfig): ApiRef<T> & {
-      readonly $$type: '@backstage/ApiRef';
-    } {
+    with<TId extends string>(
+      withConfig: ApiRefConfig & { id: TId; pluginId?: string },
+    ): ApiRef<T, TId> & { readonly $$type: '@backstage/ApiRef' } {
       validateId(withConfig.id);
-      return makeApiRef<T>(withConfig);
+      return makeApiRef<T, TId>(withConfig);
     },
   };
 }

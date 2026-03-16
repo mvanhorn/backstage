@@ -24,7 +24,10 @@ export type PluginWrapperApi = {
 };
 
 // @public
-export const pluginWrapperApiRef: ApiRef<PluginWrapperApi> & {
+export const pluginWrapperApiRef: ApiRef<
+  PluginWrapperApi,
+  'core.plugin-wrapper'
+> & {
   readonly $$type: '@backstage/ApiRef';
 };
 

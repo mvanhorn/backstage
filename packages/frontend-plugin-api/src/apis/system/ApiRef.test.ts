@@ -15,6 +15,7 @@
  */
 
 import { createApiRef } from './ApiRef';
+import type { ApiRef as ApiRefType } from './types';
 
 describe('ApiRef', () => {
   it('should be created with config', () => {
@@ -22,7 +23,22 @@ describe('ApiRef', () => {
     expect(ref.$$type).toBe('@backstage/ApiRef');
     expect(ref.id).toBe('abc');
     expect(String(ref)).toBe('apiRef{abc}');
-    expect(() => ref.T).toThrow('tried to read ApiRef.T of apiRef{abc}');
+    expect(ref.T).toBeNull();
+  });
+
+  it('should not accept pluginId with deprecated config form', () => {
+    // @ts-expect-error pluginId is only supported through .with(...)
+    createApiRef<string>({ id: 'abc', pluginId: 'test' });
+  });
+
+  it('should keep the deprecated config form id wide', () => {
+    const ref = createApiRef<string>({ id: 'abc' });
+    const wideRef: ApiRefType<string> = ref;
+    expect(wideRef.id).toBe('abc');
+
+    // @ts-expect-error deprecated config form should not infer literal ids
+    const literalRef: ApiRefType<string, 'abc'> = ref;
+    expect(literalRef.id).toBe('abc');
   });
 
   it('should be created with builder pattern', () => {
@@ -31,7 +47,17 @@ describe('ApiRef', () => {
     expect(ref.id).toBe('abc');
     expect(ref.pluginId).toBe('test');
     expect(String(ref)).toBe('apiRef{abc}');
-    expect(() => ref.T).toThrow('tried to read ApiRef.T of apiRef{abc}');
+    expect(ref.T).toBeNull();
+  });
+
+  it('should infer literal ids with builder pattern', () => {
+    const ref = createApiRef<string>().with({ id: 'abc', pluginId: 'test' });
+    const literalRef: ApiRefType<string, 'abc'> = ref;
+    expect(literalRef.id).toBe('abc');
+
+    // @ts-expect-error builder pattern should preserve literal ids
+    const wrongLiteralRef: ApiRefType<string, 'def'> = ref;
+    expect(wrongLiteralRef.id).toBe('abc');
   });
 
   it('should reject invalid ids', () => {

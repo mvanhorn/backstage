@@ -260,25 +260,20 @@ export function instantiateAndInitializePhaseTree(options: {
   routeResolutionApi: RouteResolutionApiProxy;
   appTreeApi: AppTreeApiProxy;
   routeRefsById: ReturnType<typeof collectRouteIds>;
-  stopAtSessionBoundary?: boolean;
   skipChild?(ctx: { node: AppNode; input: string; child: AppNode }): boolean;
   onMissingApi?(ctx: { node: AppNode; apiRefId: string }): void;
   predicateContext?: ExtensionPredicateContext;
   stopAtAttachment?(ctx: { node: AppNode; input: string }): boolean;
 }) {
-  let stopAtAttachment = options.stopAtAttachment;
-  if (options.stopAtSessionBoundary) {
-    stopAtAttachment = ({ node, input }) =>
-      isSessionBoundaryAttachment(node, input);
-  }
-
   instantiateAppNodeTree(
     options.tree.root,
     options.apis,
     options.collector,
     options.extensionFactoryMiddleware,
     {
-      ...(stopAtAttachment ? { stopAtAttachment } : {}),
+      ...(options.stopAtAttachment
+        ? { stopAtAttachment: options.stopAtAttachment }
+        : {}),
       skipChild: options.skipChild,
       onMissingApi: options.onMissingApi,
       predicateContext: options.predicateContext,
@@ -305,8 +300,4 @@ export function setIdentityApiTarget(options: {
   options.identityApiProxy.setTarget(options.identityApi, {
     signOutTargetUrl: options.signOutTargetUrl,
   });
-}
-
-function isSessionBoundaryAttachment(node: AppNode, input: string) {
-  return node.spec.id === 'app/root' && input === 'children';
 }

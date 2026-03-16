@@ -292,9 +292,6 @@ describe('createApp', () => {
     });
 
     await expect(
-      screen.findByText(/Error in app/),
-    ).resolves.toBeInTheDocument();
-    await expect(
       screen.findByText('sign-in bootstrap failed'),
     ).resolves.toBeInTheDocument();
   });

@@ -38,7 +38,7 @@ import {
   OpaqueFrontendPlugin,
 } from '@internal/frontend';
 import { OpaqueType } from '@internal/opaque';
-import { ComponentType, ReactNode, useLayoutEffect, useState } from 'react';
+import { ComponentType, ReactNode, useSyncExternalStore } from 'react';
 
 // eslint-disable-next-line @backstage/no-relative-monorepo-imports
 import {
@@ -150,6 +150,12 @@ type FinalizationState = {
   reject(error: unknown): void;
 };
 
+type BootstrapErrorStore = {
+  getSnapshot(): Error | undefined;
+  subscribe(listener: () => void): () => void;
+  report(error: Error): void;
+};
+
 type InternalSpecializedAppSessionState = {
   apis: ApiHolder;
   identityApi?: IdentityApi;
@@ -244,10 +250,7 @@ export type PrepareSpecializedAppOptions = {
  */
 export type PreparedSpecializedApp = {
   getBootstrapApp(): BootstrapSpecializedApp;
-  onFinalized(
-    callback: (app: FinalizedSpecializedApp) => void,
-    onError?: (error: Error) => void,
-  ): () => void;
+  onFinalized(callback: (app: FinalizedSpecializedApp) => void): () => void;
   finalize(options?: {
     sessionState?: SpecializedAppSessionState;
   }): FinalizedSpecializedApp;
@@ -369,6 +372,7 @@ export function prepareSpecializedApp(
     apis: phase.apis,
     predicateReferences,
   });
+  const bootstrapErrorStore = createBootstrapErrorStore();
   let signInRuntime: SignInRuntime | undefined;
   let cachedSessionState = providedSessionState;
   let sessionStatePromise: Promise<SpecializedAppSessionState> | undefined;
@@ -376,8 +380,6 @@ export function prepareSpecializedApp(
   let bootstrapApp: BootstrapSpecializedApp | undefined;
   let bootstrapError: Error | undefined;
   let finalizationState: FinalizationState | undefined;
-  let bootstrapErrorReporter: ((error: Error) => void) | undefined;
-  let pendingBootstrapError: Error | undefined;
 
   function updateIdentityApiTarget(identityApi?: IdentityApi) {
     if (!identityApi) {
@@ -524,12 +526,7 @@ export function prepareSpecializedApp(
   function reportBootstrapFailure(error: unknown) {
     const bootstrapFailure = asError(error);
     bootstrapError = bootstrapFailure;
-    if (bootstrapErrorReporter) {
-      bootstrapErrorReporter(bootstrapFailure);
-      return;
-    }
-
-    pendingBootstrapError = bootstrapFailure;
+    bootstrapErrorStore.report(bootstrapFailure);
   }
 
   function getFinalizationState(): FinalizationState {
@@ -576,13 +573,8 @@ export function prepareSpecializedApp(
       .catch(error => {
         finalizationState = undefined;
 
-        if (signInRuntime?.requiresSignIn) {
-          finalization.reject(error);
-          return;
-        }
-
         reportBootstrapFailure(error);
-        finalization.reject(bootstrapError);
+        finalization.reject(bootstrapError ?? asError(error));
       });
 
     return finalization.promise;
@@ -618,19 +610,7 @@ export function prepareSpecializedApp(
       appTreeApi: phase.appTreeApi,
       extensionFactoryMiddleware: mergedExtensionFactoryMiddleware,
       disableSignIn: Boolean(providedSessionState),
-      registerBootstrapErrorReporter(reporter) {
-        bootstrapErrorReporter = reporter;
-        if (pendingBootstrapError) {
-          reporter(pendingBootstrapError);
-          pendingBootstrapError = undefined;
-        }
-
-        return () => {
-          if (bootstrapErrorReporter === reporter) {
-            bootstrapErrorReporter = undefined;
-          }
-        };
-      },
+      bootstrapErrorStore,
       skipBootstrapChild({ child }) {
         return bootstrapClassification.deferredRoots.has(child);
       },
@@ -654,18 +634,12 @@ export function prepareSpecializedApp(
 
   return {
     getBootstrapApp,
-    onFinalized(callback, onError) {
+    onFinalized(callback) {
       getBootstrapApp();
 
       let subscribed = true;
 
       if (bootstrapError) {
-        const currentBootstrapError = bootstrapError;
-        Promise.resolve().then(() => {
-          if (subscribed) {
-            onError?.(currentBootstrapError);
-          }
-        });
         return () => {
           subscribed = false;
         };
@@ -692,11 +666,7 @@ export function prepareSpecializedApp(
             callback(finalizedApp);
           }
         })
-        .catch(error => {
-          if (subscribed) {
-            onError?.(asError(error));
-          }
-        });
+        .catch(() => {});
 
       return () => {
         subscribed = false;
@@ -819,7 +789,7 @@ function createBootstrapApp(options: {
   appTreeApi: AppTreeApiProxy;
   extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
   disableSignIn?: boolean;
-  registerBootstrapErrorReporter(reporter: (error: Error) => void): () => void;
+  bootstrapErrorStore: BootstrapErrorStore;
   skipBootstrapChild?(ctx: {
     node: AppNode;
     input: string;
@@ -830,6 +800,11 @@ function createBootstrapApp(options: {
   bootstrapApp: BootstrapSpecializedApp;
   requiresSignIn: boolean;
 } {
+  prepareBootstrapErrorThrower({
+    tree: options.tree,
+    store: options.bootstrapErrorStore,
+  });
+
   const signInPageNode = getAppRootNode(options.tree)?.edges.attachments.get(
     'signInPage',
   )?.[0];
@@ -842,13 +817,8 @@ function createBootstrapApp(options: {
     routeResolutionApi: options.routeResolutionApi,
     appTreeApi: options.appTreeApi,
     routeRefsById: options.routeRefsById,
-    stopAtSessionBoundary: true,
     skipChild: options.skipBootstrapChild,
     onMissingApi: options.onMissingApi,
-  });
-  prepareBootstrapErrorBoundary({
-    tree: options.tree,
-    registerBootstrapErrorReporter: options.registerBootstrapErrorReporter,
   });
 
   const element = options.tree.root.instance?.getData(
@@ -876,38 +846,34 @@ function prepareFinalizedTree(options: { tree: AppTree }) {
   }
 }
 
-function prepareBootstrapErrorBoundary(options: {
+function prepareBootstrapErrorThrower(options: {
   tree: AppTree;
-  registerBootstrapErrorReporter(reporter: (error: Error) => void): () => void;
+  store: BootstrapErrorStore;
 }) {
-  const rootNode = options.tree.root;
-  const rootInstance = rootNode.instance;
-  if (!rootInstance) {
+  const bootstrapChildNode = getAppRootNode(
+    options.tree,
+  )?.edges.attachments.get('children')?.[0];
+  if (!bootstrapChildNode) {
     return;
   }
 
-  const rootElement = rootInstance.getData(coreExtensionData.reactElement);
-  if (!rootElement) {
-    return;
-  }
-
-  function PreparedBootstrapRoot() {
-    const [bootstrapError, setBootstrapError] = useState<Error>();
-
-    useLayoutEffect(() => {
-      return options.registerBootstrapErrorReporter(setBootstrapError);
-    }, []);
+  function BootstrapErrorThrower() {
+    const bootstrapError = useSyncExternalStore(
+      options.store.subscribe,
+      options.store.getSnapshot,
+      options.store.getSnapshot,
+    );
 
     if (bootstrapError) {
       throw bootstrapError;
     }
 
-    return rootElement;
+    return null;
   }
 
   setNodeInstance(
-    rootNode,
-    createReactElementOverrideInstance(rootInstance, <PreparedBootstrapRoot />),
+    bootstrapChildNode,
+    createReactElementInstance(<BootstrapErrorThrower />),
   );
 }
 
@@ -959,23 +925,39 @@ function isSessionBoundaryAttachment(node: AppNode, input: string) {
   return node.spec.id === 'app/root' && input === 'children';
 }
 
-function createReactElementOverrideInstance(
-  instance: AppNodeInstance,
-  value: ReactNode,
-): AppNodeInstance {
+function createReactElementInstance(value: ReactNode): AppNodeInstance {
   return {
     getDataRefs() {
-      const refs = Array.from(instance.getDataRefs());
-      if (!refs.some(ref => ref.id === coreExtensionData.reactElement.id)) {
-        refs.push(coreExtensionData.reactElement);
-      }
-      return refs[Symbol.iterator]();
+      return [coreExtensionData.reactElement].values();
     },
     getData<TValue>(dataRef: ExtensionDataRef<TValue>) {
       if (dataRef.id === coreExtensionData.reactElement.id) {
         return value as TValue;
       }
-      return instance.getData(dataRef);
+      return undefined;
+    },
+  };
+}
+
+function createBootstrapErrorStore(): BootstrapErrorStore {
+  let snapshot: Error | undefined;
+  const listeners = new Set<() => void>();
+
+  return {
+    getSnapshot() {
+      return snapshot;
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    report(error) {
+      snapshot = error;
+      for (const listener of listeners) {
+        listener();
+      }
     },
   };
 }

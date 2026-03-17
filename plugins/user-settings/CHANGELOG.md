@@ -1,5 +1,20 @@
 # @backstage/plugin-user-settings
 
+## 0.9.1
+
+### Patch Changes
+
+- e26e3de: The `ProviderSettingsItem` `icon` prop now accepts `IconElement` in addition to `IconComponent`.
+- 538c985: Updated installation documentation to use feature discovery as the default.
+- 3f36ce1: Updated alpha plugin icons to follow the new frontend icon sizing rules when rendered in plugin and navigation surfaces.
+- Updated dependencies
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/core-app-api@1.19.6
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-catalog-react@2.1.0
+  - @backstage/plugin-signals-react@0.0.20
+
 ## 0.9.1-next.2
 
 ### Patch Changes

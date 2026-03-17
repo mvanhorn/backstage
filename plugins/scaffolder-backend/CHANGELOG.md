@@ -1,5 +1,31 @@
 # @backstage/plugin-scaffolder-backend
 
+## 3.2.0
+
+### Minor Changes
+
+- c9b11eb: Added a new `list-scaffolder-tasks` action that allows querying scaffolder tasks with optional ownership filtering and pagination support
+- 0fbcf23: Migrated OpenAPI schemas to 3.1.
+- 7695dd2: Added a new `list-scaffolder-actions` action that returns all installed scaffolder actions with their schemas and examples
+- e8736ea: Added secrets schema validation for task creation, retry, and dry-run endpoints. When a template defines `spec.secrets.schema`, the API validates provided secrets against the schema and returns a `400` error if validation fails.
+
+### Patch Changes
+
+- e27bd4e: Removed `@backstage/plugin-scaffolder-backend-module-bitbucket` from `package.json` as the package itself has been deprecated and the code deleted.
+- 4f5ed06: Fixed a security vulnerability where server-configured environment secrets were exposed through the scaffolder dry-run endpoint.
+- 30ff981: Fixed a security vulnerability where secrets could bypass log redaction when transformed through Nunjucks filters in scaffolder templates.
+- 4e39e63: Removed unused dependencies
+- ccc20cf: create scaffolder MCP action to dry run a provided scaffolder template
+- Updated dependencies
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/plugin-scaffolder-node@0.13.0
+  - @backstage/integration@2.0.0
+  - @backstage/plugin-catalog-node@2.1.0
+  - @backstage/plugin-scaffolder-common@2.0.0
+  - @backstage/backend-openapi-utils@0.6.7
+  - @backstage/plugin-events-node@0.4.20
+  - @backstage/plugin-permission-node@0.10.11
+
 ## 3.2.0-next.2
 
 ### Minor Changes

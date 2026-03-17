@@ -1,5 +1,13 @@
 # e2e-test
 
+## 0.2.38
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/cli-common@0.2.0
+  - @backstage/create-app@0.7.10
+
 ## 0.2.38-next.0
 
 ### Patch Changes

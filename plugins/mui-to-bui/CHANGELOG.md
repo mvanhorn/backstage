@@ -1,5 +1,16 @@
 # @backstage/plugin-mui-to-bui
 
+## 0.2.5
+
+### Patch Changes
+
+- 538c985: Updated installation documentation to use feature discovery as the default.
+- ad7c883: Updated the MUI to BUI theme converter page to use the renamed `Header` component from `@backstage/ui`.
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/ui@0.13.0
+  - @backstage/core-plugin-api@1.12.4
+
 ## 0.2.5-next.2
 
 ### Patch Changes

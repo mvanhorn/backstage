@@ -1,5 +1,23 @@
 # @backstage/plugin-app
 
+## 0.4.1
+
+### Patch Changes
+
+- c0ab376: The app nav now falls back to `plugin.icon` for navigation items that don't have an explicit icon set.
+- 12d8afe: Added `BUIProvider` from `@backstage/ui` to the app root, enabling BUI components to fire analytics events through the Backstage analytics system.
+- 9508514: Updated the default `PluginWrapperApi` implementation to support the new `useWrapperValue` hook and root wrapper. The root wrapper is now rendered in the app root to manage shared hook state across plugin wrapper instances.
+- 42f8c9b: Moved `BUIProvider` inside the app router to enable automatic client-side routing for all BUI components.
+- 909c742: Switched translation API imports (`translationApiRef`, `appLanguageApiRef`) from the alpha `@backstage/core-plugin-api/alpha` path to the stable `@backstage/frontend-plugin-api` export. This has no effect on runtime behavior.
+- Updated dependencies
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/ui@0.13.0
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-app-react@0.2.1
+  - @backstage/integration-react@1.2.16
+  - @backstage/plugin-permission-react@0.4.41
+
 ## 0.4.1-next.2
 
 ### Patch Changes

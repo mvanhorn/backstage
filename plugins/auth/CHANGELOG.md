@@ -1,5 +1,14 @@
 # @backstage/plugin-auth
 
+## 0.1.6
+
+### Patch Changes
+
+- 06294aa: Migrated the ConsentPage UI from Material-UI and `@backstage/core-components` to `@backstage/ui`.
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/ui@0.13.0
+
 ## 0.1.6-next.1
 
 ### Patch Changes

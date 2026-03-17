@@ -1,5 +1,31 @@
 # @backstage/backend-dynamic-feature-service
 
+## 0.8.0
+
+### Minor Changes
+
+- 0fbcf23: Migrated OpenAPI schemas to 3.1.
+
+### Patch Changes
+
+- 4074a22: Fixed `resolvePackagePath` resolution for bundled dynamic plugins. When a plugin bundles its own copy of `@backstage/backend-plugin-api` inside `node_modules`, the `CommonJSModuleLoader` fallback now correctly resolves the plugin's `package.json` by name. Previously the fallback only applied when the resolution originated from the host application; it now also applies when originating from a bundled dependency, which is the case for plugins produced by the `backstage-cli package bundle` command.
+- 70fc178: Migrated from deprecated `findPaths` to `targetPaths` and `findOwnPaths` from `@backstage/cli-common`.
+- Updated dependencies
+  - @backstage/cli-node@0.3.0
+  - @backstage/plugin-catalog-backend@3.5.0
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/backend-defaults@0.16.0
+  - @backstage/cli-common@0.2.0
+  - @backstage/plugin-scaffolder-node@0.13.0
+  - @backstage/plugin-events-backend@0.6.0
+  - @backstage/config-loader@1.10.9
+  - @backstage/backend-openapi-utils@0.6.7
+  - @backstage/plugin-app-node@0.1.43
+  - @backstage/plugin-auth-node@0.6.14
+  - @backstage/plugin-events-node@0.4.20
+  - @backstage/plugin-permission-node@0.10.11
+  - @backstage/plugin-search-backend-node@1.4.2
+
 ## 0.8.0-next.2
 
 ### Patch Changes

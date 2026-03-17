@@ -1,5 +1,18 @@
 # @backstage/plugin-catalog-unprocessed-entities
 
+## 0.2.27
+
+### Patch Changes
+
+- 538c985: Updated installation documentation to use feature discovery as the default.
+- 3f36ce1: Updated alpha plugin icons to follow the new frontend icon sizing rules when rendered in plugin and navigation surfaces.
+- Updated dependencies
+  - @backstage/core-compat-api@0.5.9
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-devtools-react@0.1.2
+
 ## 0.2.27-next.1
 
 ### Patch Changes

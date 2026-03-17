@@ -1,5 +1,21 @@
 # @backstage/plugin-scaffolder-node
 
+## 0.13.0
+
+### Minor Changes
+
+- e27bd4e: **BREAKING** Removed deprecated `bitbucket` integration from being used in the `parseRepoUrl` function. It will use the `bitbucketCloud` or `bitbucketServer` integrations instead.
+
+### Patch Changes
+
+- cd0ecc5: Added `removeFiles` helper function for staging file removals in Git.
+- f598909: Added `scaffolderServiceRef` and `ScaffolderService` interface for backend plugins that need to interact with the scaffolder API using `BackstageCredentials` instead of raw tokens.
+- Updated dependencies
+  - @backstage/backend-test-utils@1.11.1
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/integration@2.0.0
+  - @backstage/plugin-scaffolder-common@2.0.0
+
 ## 0.13.0-next.2
 
 ### Patch Changes

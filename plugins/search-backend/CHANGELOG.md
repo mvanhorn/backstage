@@ -1,5 +1,19 @@
 # @backstage/plugin-search-backend
 
+## 2.1.0
+
+### Minor Changes
+
+- 0fbcf23: Migrated OpenAPI schemas to 3.1.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/backend-openapi-utils@0.6.7
+  - @backstage/plugin-permission-node@0.10.11
+  - @backstage/plugin-search-backend-node@1.4.2
+
 ## 2.1.0-next.2
 
 ### Patch Changes

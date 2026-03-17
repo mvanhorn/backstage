@@ -1,5 +1,24 @@
 # @backstage/plugin-api-docs
 
+## 0.13.5
+
+### Patch Changes
+
+- 9c9d425: Fixed invisible text in parameter input fields when using dark mode in OpenAPI definition pages
+- 538c985: Updated installation documentation to use feature discovery as the default.
+- 30e08df: Added default entity content groups for the API docs entity content tabs. The API definition tab defaults to the `documentation` group and the APIs tab defaults to the `development` group.
+- 3f36ce1: Updated alpha plugin icons to follow the new frontend icon sizing rules when rendered in plugin and navigation surfaces.
+- ca277ef: Updated dependency `graphiql` to `3.9.0` to address security vulnerability in `markdown-it` package.
+  Updated dependency `@graphiql/react` to `0.29.0` to match the version used by `graphiql`.
+  Moved dependency `graphql-config` to `devDependencies` as it is needed only for types.
+- Updated dependencies
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/plugin-catalog@2.0.0
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-catalog-react@2.1.0
+  - @backstage/plugin-permission-react@0.4.41
+
 ## 0.13.5-next.2
 
 ### Patch Changes

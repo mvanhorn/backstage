@@ -1,5 +1,22 @@
 # @backstage/frontend-test-utils
 
+## 0.5.1
+
+### Patch Changes
+
+- b56f573: Deprecated standalone mock API exports in favor of the `mockApis` namespace. This includes the mock classes (`MockAlertApi`, `MockAnalyticsApi`, `MockConfigApi`, `MockErrorApi`, `MockFetchApi`, `MockFeatureFlagsApi`, `MockPermissionApi`, `MockStorageApi`, `MockTranslationApi`), their option types (`MockErrorApiOptions`, `MockFeatureFlagsApiOptions`), and the `ErrorWithContext` type. `MockFetchApiOptions` is kept as a non-deprecated export. Use the `mockApis` namespace instead, for example `mockApis.alert()` or `mockApis.alert.mock()`.
+- 479282f: Fixed type inference of `TestApiPair` when using tuple syntax by wrapping `MockWithApiFactory` in `NoInfer`.
+- 909c742: Switched `MockTranslationApi` and related test utility imports from `@backstage/core-plugin-api/alpha` to the stable `@backstage/frontend-plugin-api` export. The `TranslationApi` type in the API report is now sourced from a single package. This has no effect on runtime behavior.
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/core-app-api@1.19.6
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/frontend-app-api@0.16.0
+  - @backstage/plugin-app-react@0.2.1
+  - @backstage/plugin-app@0.4.1
+  - @backstage/test-utils@1.7.16
+  - @backstage/plugin-permission-react@0.4.41
+
 ## 0.5.1-next.2
 
 ### Patch Changes

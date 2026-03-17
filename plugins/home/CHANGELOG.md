@@ -1,5 +1,20 @@
 # @backstage/plugin-home
 
+## 0.9.3
+
+### Patch Changes
+
+- 538c985: Updated installation documentation to use feature discovery as the default.
+- Updated dependencies
+  - @backstage/core-compat-api@0.5.9
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/catalog-client@1.14.0
+  - @backstage/core-app-api@1.19.6
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-catalog-react@2.1.0
+  - @backstage/plugin-home-react@0.1.36
+
 ## 0.9.3-next.2
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @backstage/core-app-api
 
+## 1.19.6
+
+### Patch Changes
+
+- 12d8afe: Added `BUIProvider` from `@backstage/ui` to the app shell provider tree, enabling BUI components to fire analytics events through the Backstage analytics system.
+- 0452d02: Add optional `description` field to plugin-level feature flags.
+- 42f8c9b: Added `BUIProvider` inside the legacy app router to enable client-side routing for all BUI components.
+- Updated dependencies
+  - @backstage/ui@0.13.0
+  - @backstage/core-plugin-api@1.12.4
+
 ## 1.19.6-next.1
 
 ### Patch Changes

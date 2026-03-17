@@ -1,5 +1,16 @@
 # @backstage/core-compat-api
 
+## 0.5.9
+
+### Patch Changes
+
+- b15a685: Added `withApis`, which is a Higher-Order Component for providing APIs as props to a component via `useApiHolder`.
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-catalog-react@2.1.0
+  - @backstage/plugin-app-react@0.2.1
+
 ## 0.5.9-next.2
 
 ### Patch Changes

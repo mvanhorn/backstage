@@ -1,5 +1,17 @@
 # @backstage/plugin-techdocs-backend
 
+## 2.1.6
+
+### Patch Changes
+
+- cb7c6b1: Added `techdocs.generator.mkdocs.dangerouslyAllowAdditionalKeys` configuration option to explicitly bypass MkDocs configuration key restrictions. This enables support for additional MkDocs configuration keys beyond the default safe allow list, such as the `hooks` key which some MkDocs plugins require.
+- Updated dependencies
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/catalog-client@1.14.0
+  - @backstage/plugin-techdocs-node@1.14.4
+  - @backstage/integration@2.0.0
+  - @backstage/plugin-catalog-node@2.1.0
+
 ## 2.1.6-next.2
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # @backstage/backend-plugin-api
 
+## 1.8.0
+
+### Minor Changes
+
+- 015668c: Added `cancelTask` method to the `SchedulerService` interface and implementation, allowing cancellation of currently running scheduled tasks. For global tasks, the database lock is released and a periodic liveness check aborts the running task function. For local tasks, the task's abort signal is triggered directly. A new `POST /.backstage/scheduler/v1/tasks/:id/cancel` endpoint is also available.
+
+### Patch Changes
+
+- 1ee5b28: Adds an alpha `MetricsService` to provide a unified interface for metrics instrumentation across Backstage plugins.
+- Updated dependencies
+  - @backstage/cli-common@0.2.0
+  - @backstage/plugin-auth-node@0.6.14
+  - @backstage/plugin-permission-node@0.10.11
+
 ## 1.8.0-next.1
 
 ### Minor Changes

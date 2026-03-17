@@ -1,5 +1,22 @@
 # @backstage/frontend-app-api
 
+## 0.16.0
+
+### Minor Changes
+
+- 92af1ae: **BREAKING**: Removed the `allowUnknownExtensionConfig` option from `createSpecializedApp`. This flag had no effect and was a no-op, so no behavioral changes are expected.
+
+### Patch Changes
+
+- 0452d02: Add optional `description` field to plugin-level feature flags.
+- dab6c46: Added the `ExtensionFactoryMiddleware` type as a public export.
+- 3f36ce1: Clarified the `IconElement` sizing contract for the new frontend system and aligned legacy system icon rendering with the new icon API.
+- Updated dependencies
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/core-app-api@1.19.6
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/frontend-defaults@0.5.0
+
 ## 0.16.0-next.1
 
 ### Minor Changes

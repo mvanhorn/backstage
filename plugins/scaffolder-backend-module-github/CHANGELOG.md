@@ -1,5 +1,17 @@
 # @backstage/plugin-scaffolder-backend-module-github
 
+## 0.9.7
+
+### Patch Changes
+
+- a761a48: Added optional `returnWorkflowRunDetails` input to `github:actions:dispatch` action. When true, exposes `workflowRunId`, `workflowRunUrl`, and `workflowRunHtmlUrl` as outputs using the GitHub API `return_run_details` parameter.
+- b2591f6: Fixed environment `waitTime` description incorrectly asking for milliseconds instead of minutes.
+- Updated dependencies
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/plugin-scaffolder-node@0.13.0
+  - @backstage/integration@2.0.0
+  - @backstage/plugin-catalog-node@2.1.0
+
 ## 0.9.7-next.2
 
 ### Patch Changes

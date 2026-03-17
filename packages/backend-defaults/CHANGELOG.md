@@ -1,5 +1,33 @@
 # @backstage/backend-defaults
 
+## 0.16.0
+
+### Minor Changes
+
+- 0e7d8f9: The scheduler service now uses the metrics service to create metrics, providing plugin-scoped attribution.
+- 527cf88: **BREAKING** Removed deprecated `BitbucketUrlReader`. Use the `BitbucketCloudUrlReader` or the `BitbucketServerUrlReader` instead.
+
+### Patch Changes
+
+- 015668c: Added `cancelTask` method to the `SchedulerService` interface and implementation, allowing cancellation of currently running scheduled tasks. For global tasks, the database lock is released and a periodic liveness check aborts the running task function. For local tasks, the task's abort signal is triggered directly. A new `POST /.backstage/scheduler/v1/tasks/:id/cancel` endpoint is also available.
+- 6738cf0: build(deps): bump `minimatch` from 9.0.5 to 10.2.1
+- 62f0a53: Fixed error forwarding in the actions registry so that known errors like `InputError` and `NotFoundError` thrown by actions preserve their original status codes and messages instead of being wrapped in `ForwardedError` and coerced to 500.
+- d933f62: Add configurable throttling and retry mechanism for GitLab integration.
+- b99158a: Fixed `yarn backstage-cli config:check --strict --config app-config.yaml` config validation error by adding
+  an optional `default` type discriminator to PostgreSQL connection configuration,
+  allowing `config:check` to properly validate `default` connection configurations.
+- 1ee5b28: Adds an alpha `MetricsService` to provide a unified interface for metrics instrumentation across Backstage plugins.
+- 5fcbef2: Updated dependency `express-rate-limit` to `^8.0.0`.
+- Updated dependencies
+  - @backstage/cli-node@0.3.0
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/integration@2.0.0
+  - @backstage/config-loader@1.10.9
+  - @backstage/backend-app-api@1.6.0
+  - @backstage/plugin-auth-node@0.6.14
+  - @backstage/plugin-events-node@0.4.20
+  - @backstage/plugin-permission-node@0.10.11
+
 ## 0.16.0-next.2
 
 ### Patch Changes

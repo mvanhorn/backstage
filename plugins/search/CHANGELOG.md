@@ -1,5 +1,18 @@
 # @backstage/plugin-search
 
+## 1.6.2
+
+### Patch Changes
+
+- d5eb954: Fixes the search component not registering the first search on navigate to the search page.
+- 3f36ce1: Updated alpha plugin icons to follow the new frontend icon sizing rules when rendered in plugin and navigation surfaces.
+- Updated dependencies
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/plugin-search-react@1.10.5
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-catalog-react@2.1.0
+
 ## 1.6.2-next.2
 
 ### Patch Changes

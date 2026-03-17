@@ -1,5 +1,21 @@
 # @backstage/plugin-catalog-node
 
+## 2.1.0
+
+### Minor Changes
+
+- bf71677: Added the ability for SCM events subscribers to mark the fact that they have taken actions based on events, which produces output metrics:
+
+  - `catalog.events.scm.actions` with attribute `action`: Counter for the number of actions actually taken by catalog internals or other subscribers, based on SCM events. The `action` is currently either `create`, `delete`, `refresh`, or `move`.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-test-utils@1.11.1
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/catalog-client@1.14.0
+  - @backstage/plugin-permission-node@0.10.11
+
 ## 2.1.0-next.2
 
 ### Patch Changes

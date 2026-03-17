@@ -1,5 +1,16 @@
 # @techdocs/cli
 
+## 1.10.6
+
+### Patch Changes
+
+- 70fc178: Migrated from deprecated `findPaths` to `targetPaths` and `findOwnPaths` from `@backstage/cli-common`.
+- de62a9d: Upgraded `commander` dependency from `^12.0.0` to `^14.0.3` across all CLI packages.
+- Updated dependencies
+  - @backstage/backend-defaults@0.16.0
+  - @backstage/cli-common@0.2.0
+  - @backstage/plugin-techdocs-node@1.14.4
+
 ## 1.10.6-next.1
 
 ### Patch Changes

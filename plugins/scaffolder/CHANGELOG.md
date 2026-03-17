@@ -1,5 +1,26 @@
 # @backstage/plugin-scaffolder
 
+## 1.35.5
+
+### Patch Changes
+
+- e27bd4e: Removed check for deprecated `bitbucket` integration from `repoPickerValidation` function used by the `RepoUrlPicker`, it now validates the `bitbucketServer` and `bitbucketCloud` integrations instead.
+- 538c985: Updated installation documentation to use feature discovery as the default.
+- bd5b842: Added a new `ui:autoSelect` option to the EntityPicker field that controls whether an entity is automatically selected when the field loses focus. When set to `false`, the field will remain empty if the user closes it without explicitly selecting an entity, preventing unintentional selections. Defaults to `true` for backward compatibility.
+- 3f36ce1: Updated alpha plugin icons to follow the new frontend icon sizing rules when rendered in plugin and navigation surfaces.
+- Updated dependencies
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/catalog-client@1.14.0
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-catalog-react@2.1.0
+  - @backstage/plugin-scaffolder-react@1.20.0
+  - @backstage/integration@2.0.0
+  - @backstage/plugin-scaffolder-common@2.0.0
+  - @backstage/integration-react@1.2.16
+  - @backstage/plugin-permission-react@0.4.41
+  - @backstage/plugin-techdocs-react@1.3.9
+
 ## 1.35.5-next.2
 
 ### Patch Changes

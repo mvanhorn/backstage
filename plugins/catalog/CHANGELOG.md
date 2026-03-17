@@ -1,5 +1,50 @@
 # @backstage/plugin-catalog
 
+## 2.0.0
+
+### Major Changes
+
+- 5fc35bb: Migrated `EntityAboutCard`, `EntityLinksCard`, `EntityLabelsCard`, `GroupProfileCard`, and `UserProfileCard` from MUI/InfoCard to use the new BUI card layout and BUI components where possible.
+
+  **BREAKING**: Removed `variant` prop from EntityAboutCard, EntityUserProfileCard, EntityGroupProfileCard, EntityLabelsCard, EntityLinksCard. Removed `gridSizes` prop from `AboutField`.
+
+  **Migration:**
+
+  Simply delete the obsolete `variant` and `gridSizes` props, e.g:
+
+  ```diff
+  -      <EntityAboutCard variant="gridItem" />
+  +      <EntityAboutCard />
+  ```
+
+  ```diff
+  -      <AboutField label="Owner" gridSizes={{ xs: 12, sm: 6, lg: 4 }} />
+  +      <AboutField label="Owner" />
+  ```
+
+### Minor Changes
+
+- 4d58894: Added support for group alias IDs and configurable content ordering on the entity page. Groups can now declare `aliases` so that content targeting an aliased group is included in the group. A new `defaultContentOrder` option (default `title`) controls how content items within each group are sorted, with support for both a page-level default and per-group overrides.
+
+### Patch Changes
+
+- 538c985: Updated installation documentation to use feature discovery as the default.
+- 07ba746: Fixed entity page tab groups not respecting the ordering from the `groups` configuration.
+- 3f36ce1: Updated alpha plugin icons to follow the new frontend icon sizing rules when rendered in plugin and navigation surfaces.
+- Updated dependencies
+  - @backstage/core-compat-api@0.5.9
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/ui@0.13.0
+  - @backstage/plugin-search-react@1.10.5
+  - @backstage/catalog-client@1.14.0
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-catalog-react@2.1.0
+  - @backstage/plugin-scaffolder-common@2.0.0
+  - @backstage/integration-react@1.2.16
+  - @backstage/plugin-permission-react@0.4.41
+  - @backstage/plugin-techdocs-react@1.3.9
+
 ## 2.0.0-next.2
 
 ### Major Changes

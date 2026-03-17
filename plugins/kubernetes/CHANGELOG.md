@@ -1,5 +1,18 @@
 # @backstage/plugin-kubernetes
 
+## 0.12.17
+
+### Patch Changes
+
+- 538c985: Updated installation documentation to use feature discovery as the default.
+- Updated dependencies
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-catalog-react@2.1.0
+  - @backstage/plugin-kubernetes-react@0.5.17
+  - @backstage/plugin-permission-react@0.4.41
+
 ## 0.12.17-next.2
 
 ### Patch Changes

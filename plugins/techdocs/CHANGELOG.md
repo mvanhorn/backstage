@@ -1,5 +1,24 @@
 # @backstage/plugin-techdocs
 
+## 1.17.1
+
+### Patch Changes
+
+- 9795d30: chore(deps): bump `dompurify` from 3.3.1 to 3.3.2
+- 30e08df: Added `documentation` as the default entity content group for the TechDocs entity content tab.
+- 3f36ce1: Updated alpha plugin icons to follow the new frontend icon sizing rules when rendered in plugin and navigation surfaces.
+- Updated dependencies
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/plugin-search-react@1.10.5
+  - @backstage/catalog-client@1.14.0
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-catalog-react@2.1.0
+  - @backstage/integration@2.0.0
+  - @backstage/integration-react@1.2.16
+  - @backstage/plugin-auth-react@0.1.25
+  - @backstage/plugin-techdocs-react@1.3.9
+
 ## 1.17.1-next.2
 
 ### Patch Changes

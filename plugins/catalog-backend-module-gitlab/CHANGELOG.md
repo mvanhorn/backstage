@@ -1,5 +1,17 @@
 # @backstage/plugin-catalog-backend-module-gitlab
 
+## 0.8.1
+
+### Patch Changes
+
+- d933f62: Add configurable throttling and retry mechanism for GitLab integration.
+- Updated dependencies
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/backend-defaults@0.16.0
+  - @backstage/integration@2.0.0
+  - @backstage/plugin-catalog-node@2.1.0
+  - @backstage/plugin-events-node@0.4.20
+
 ## 0.8.1-next.2
 
 ### Patch Changes

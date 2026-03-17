@@ -1,5 +1,13 @@
 # @backstage/plugin-events-backend-module-kafka
 
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/plugin-events-node@0.4.20
+
 ## 0.3.2-next.1
 
 ### Patch Changes

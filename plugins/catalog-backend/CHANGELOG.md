@@ -1,5 +1,47 @@
 # @backstage/plugin-catalog-backend
 
+## 3.5.0
+
+### Minor Changes
+
+- a6b2819: Added `query-catalog-entities` action to the catalog backend actions registry. Supports predicate-based filtering with `$all`, `$any`, `$not`, `$exists`, `$in`, `$contains`, and `$hasPrefix` operators.
+- 972f686: Added support for predicate-based filtering on the `/entities/by-refs` endpoint via the `query` field in the request body. Supports `$all`, `$any`, `$not`, `$exists`, `$in`, `$contains`, and `$hasPrefix` operators.
+- 5d95e8e: Add an `onConflict` option to location creation that can refresh an existing location instead of throwing a conflict error.
+- 56c908e: Added support for predicate-based filtering on the `/entity-facets` endpoint via a new `POST` method. Supports `$all`, `$any`, `$not`, `$exists`, `$in`, `$contains`, and `$hasPrefix` operators.
+- 0fbcf23: Migrated OpenAPI schemas to 3.1.
+- bf71677: Added opentelemetry metrics for SCM events:
+
+  - `catalog.events.scm.messages` with attribute `eventType`: Counter for the number of SCM events actually received by the catalog backend. The `eventType` is currently either `location` or `repository`.
+
+- 51e23eb: Added predicate-based entity filtering via POST /entities/by-query endpoint.
+
+  Supports `$all`, `$any`, `$not`, `$exists`, `$in`, `$hasPrefix`, and (partially) `$contains` operators for expressive entity queries. Integrated into the existing `queryEntities` flow with full cursor-based pagination, permission enforcement, and `totalItems` support.
+
+  The catalog client's `queryEntities()` method automatically routes to the POST endpoint when a `query` predicate is provided.
+
+### Patch Changes
+
+- a91bd1b: Improved catalog entity deletion so parent invalidation and deferred relation restitch scheduling are coordinated more safely.
+- 6738cf0: build(deps): bump `minimatch` from 9.0.5 to 10.2.1
+- 7416e8b: Moved stitch queue concerns out of `refresh_state` and `final_entities` into a dedicated `stitch_queue` table with `entity_ref` as the primary key. The `stitch_ticket` is used for optimistic concurrency control. When a stitch completes successfully and the ticket hasn't changed, the corresponding row is deleted from the queue. The migration handles existing data and is fully reversible.
+- fbf382f: Minor internal optimisation
+- 1ee5b28: Migrates existing catalog metrics to use the alpha MetricsService. This release is a 1:1 migration with no breaking changes.
+- 72747b4: Deprecated two processors as they have been moved to the Community Plugins repo with their own backend modules:
+
+  - `AnnotateScmSlugEntityProcessor`: Use `@backstage-community/plugin-catalog-backend-module-annotate-scm-slug` instead
+  - `CodeOwnersProcessor`: Use `@backstage-community/plugin-catalog-backend-module-codeowners` instead
+
+- 3644b72: Make the `search` foreign key catalog migration non-blocking on large tables by using batch deletes and PostgreSQL `NOT VALID`/`VALIDATE` to reduce lock duration
+- 3181973: Changed the `search` table foreign key to point to `final_entities` instead of `refresh_state`
+- Updated dependencies
+  - @backstage/backend-plugin-api@1.8.0
+  - @backstage/catalog-client@1.14.0
+  - @backstage/integration@2.0.0
+  - @backstage/plugin-catalog-node@2.1.0
+  - @backstage/backend-openapi-utils@0.6.7
+  - @backstage/plugin-events-node@0.4.20
+  - @backstage/plugin-permission-node@0.10.11
+
 ## 3.5.0-next.2
 
 ### Minor Changes

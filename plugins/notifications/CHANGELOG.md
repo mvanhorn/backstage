@@ -1,5 +1,15 @@
 # @backstage/plugin-notifications
 
+## 0.5.15
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/core-plugin-api@1.12.4
+  - @backstage/plugin-signals-react@0.0.20
+
 ## 0.5.15-next.1
 
 ### Patch Changes

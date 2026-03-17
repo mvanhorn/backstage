@@ -1,5 +1,13 @@
 # @backstage/config-loader
 
+## 1.10.9
+
+### Patch Changes
+
+- 70fc178: Migrated from deprecated `findPaths` to `targetPaths` and `findOwnPaths` from `@backstage/cli-common`.
+- Updated dependencies
+  - @backstage/cli-common@0.2.0
+
 ## 1.10.9-next.0
 
 ### Patch Changes

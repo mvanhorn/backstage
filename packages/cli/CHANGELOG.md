@@ -1,5 +1,84 @@
 # @backstage/cli
 
+## 0.36.0
+
+### Minor Changes
+
+- d0f4cd2: Added new `auth` command group for authenticating the CLI with Backstage instances using OAuth 2.0 with a pre-registered client metadata document. Commands include `login`, `logout`, `list`, `show`, `print-token`, and `select` for managing multiple authenticated instances.
+- d806b0c: The CLI now automatically discovers CLI modules from the project root's `dependencies` and `devDependencies`. Any installed package with the `cli-module` Backstage role will be loaded automatically without needing to be hardcoded in the CLI itself.
+
+  If no CLI modules are found in the project dependencies, the CLI falls back to the built-in set of modules and prints a deprecation warning. This fallback will be removed in a future release. To prepare for this, add `@backstage/cli-defaults` as a `devDependency` in your root `package.json`:
+
+  ```json
+  {
+    "devDependencies": {
+      "@backstage/cli-defaults": "backstage:^"
+    }
+  }
+  ```
+
+  If you are not using the Backstage Yarn plugin, run the following instead:
+
+  ```sh
+  yarn workspace root add --dev @backstage/cli-defaults
+  ```
+
+  For fine-grained control you can instead install individual CLI modules:
+
+  ```json
+  {
+    "devDependencies": {
+      "@backstage/cli-module-auth": "backstage:^",
+      "@backstage/cli-module-build": "backstage:^",
+      "@backstage/cli-module-config": "backstage:^",
+      "@backstage/cli-module-github": "backstage:^",
+      "@backstage/cli-module-info": "backstage:^",
+      "@backstage/cli-module-lint": "backstage:^",
+      "@backstage/cli-module-maintenance": "backstage:^",
+      "@backstage/cli-module-migrate": "backstage:^",
+      "@backstage/cli-module-new": "backstage:^",
+      "@backstage/cli-module-test-jest": "backstage:^",
+      "@backstage/cli-module-translations": "backstage:^"
+    }
+  }
+  ```
+
+- b36a60d: **BREAKING**: The `migrate package-exports` command has been removed. Use `repo fix` instead.
+
+### Patch Changes
+
+- 246877a: Updated dependency `bfj` to `^9.0.2`.
+- 0d2d0f2: Internal refactor of CLI modularization, moving individual commands to be implemented with cleye.
+- a4e5902: Internal refactor of the CLI command registration
+- bba2e49: Internal refactor to use new concurrency utilities from `@backstage/cli-node`.
+- 2fcba39: Internal refactor to move shared utilities into their consuming modules, reducing cross-module dependencies.
+- c85ac86: Internal refactor to split `loadCliConfig` into separate implementations for the build and config CLI modules, removing a cross-module dependency.
+- 94a885a: Added support for the new `cli-module` package role in the build system, ESLint configuration, Jest configuration, and maintenance commands.
+- fd50cb3: Added `translations export` and `translations import` commands for managing translation files.
+
+  The `translations export` command discovers all `TranslationRef` definitions across frontend plugin dependencies and exports their default messages as JSON files. The `translations import` command generates `TranslationResource` wiring code from translated JSON files, ready to be plugged into the app.
+
+  Both commands support a `--pattern` option for controlling the message file layout, for example `--pattern '{lang}/{id}.json'` for language-based directory grouping.
+
+- 0be3eab: Migrated CLI plugin modules to use `createCliModule` from `@backstage/cli-node`.
+- 61cb976: Migrated internal versioning utilities to use `@backstage/cli-node` instead of a local implementation.
+- 6738cf0: build(deps): bump `minimatch` from 9.0.5 to 10.2.1
+- ff4a45a: Migrated remaining CLI command handlers from `commander` to `cleye` for argument parsing. Several camelCase CLI flags have been deprecated in favor of their kebab-case equivalents (e.g. `--successCache` → `--success-cache`). The old camelCase forms still work but will now log a deprecation warning. Please update any scripts or CI configurations to use the kebab-case versions.
+- 70fc178: Migrated from deprecated `findPaths` to `targetPaths` and `findOwnPaths` from `@backstage/cli-common`.
+- 825c81d: Internal refactor of CLI command modules.
+- ebeb0d4: Updated the new frontend plugin template to use `@backstage/frontend-dev-utils` in its `dev/` entry point instead of wiring `createApp` manually. Generated plugins now get the same dev app helper setup as the built-in examples.
+- de62a9d: Upgraded `commander` dependency from `^12.0.0` to `^14.0.3` across all CLI packages.
+- 092b41f: Updated dependency `webpack` to `~5.105.0`.
+- 4a75544: Updated dependency `react-refresh` to `^0.18.0`.
+- a9d23c4: Properly support `package.json` `workspaces` field
+- Updated dependencies
+  - @backstage/cli-node@0.3.0
+  - @backstage/cli-common@0.2.0
+  - @backstage/cli-defaults@0.1.0
+  - @backstage/cli-module-build@0.1.0
+  - @backstage/eslint-plugin@0.2.2
+  - @backstage/cli-module-test-jest@0.1.0
+
 ## 0.36.0-next.2
 
 ### Minor Changes

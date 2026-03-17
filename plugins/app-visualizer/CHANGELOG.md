@@ -1,5 +1,16 @@
 # @backstage/plugin-app-visualizer
 
+## 0.2.1
+
+### Patch Changes
+
+- c25532a: Switched dev entry point to use `createDevApp` from `@backstage/frontend-dev-utils`.
+- Updated dependencies
+  - @backstage/core-components@0.18.8
+  - @backstage/frontend-plugin-api@0.15.0
+  - @backstage/ui@0.13.0
+  - @backstage/core-plugin-api@1.12.4
+
 ## 0.2.1-next.2
 
 ### Patch Changes
